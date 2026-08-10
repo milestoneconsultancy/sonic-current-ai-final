@@ -4,10 +4,36 @@ import CryptoJS from 'crypto-js';
 import { GoogleGenAI } from '@google/genai';
 
 interface SearchIntent {
-  correctedQuery: string;
-  type: 'artist' | 'album' | 'movie' | 'genre' | 'mood' | 'era' | 'general';
+  normalizedQuery: string;
+  intent:
+    | 'artist'
+    | 'album'
+    | 'movie'
+    | 'lyrics'
+    | 'genre'
+    | 'mood'
+    | 'theme'
+    | 'era'
+    | 'language'
+    | 'activity'
+    | 'occasion'
+    | 'relationship'
+    | 'combination'
+    | 'general';
+  entities: {
+    artist?: string | null;
+    album?: string | null;
+    movie?: string | null;
+    genre?: string | null;
+    mood?: string | null;
+    theme?: string | null;
+    era?: string | null;
+    language?: string | null;
+    lyrics?: string | null;
+  };
+  searchQueries: string[];
   contextLabel: string;
-  targetQueries: string[];
+  confidence?: number;
 }
 
 const aiSearchCache = new Map<string, { intent: SearchIntent; timestamp: number }>();
@@ -16,119 +42,167 @@ function getDeterministicSearchIntent(query: string): SearchIntent {
   const trimmed = query.trim().replace(/\s+/g, ' ');
   const lower = trimmed.toLowerCase();
 
-  const norm = trimmed
+  // 1. Common Typo & Transliteration Normalization
+  let norm = trimmed
     .replace(/\barjit singh\b/gi, 'Arijit Singh')
+    .replace(/\barjit\b/gi, 'Arijit Singh')
     .replace(/\bmre ram\b/gi, 'Mere Ram')
     .replace(/\bsanam teri kasm\b/gi, 'Sanam Teri Kasam')
     .replace(/\bhouseful 4\b/gi, 'Housefull 4')
     .replace(/\ba r rahman\b/gi, 'A.R. Rahman')
     .replace(/\bar rahman\b/gi, 'A.R. Rahman')
-    .replace(/\bkumar sanm\b/gi, 'Kumar Sanu');
+    .replace(/\bkumar sanm\b/gi, 'Kumar Sanu')
+    .replace(/\bshreya ghosal\b/gi, 'Shreya Ghoshal')
+    .replace(/\bfrndship\b/gi, 'friendship')
+    .replace(/\bromntic\b/gi, 'romantic');
 
+  const entities: SearchIntent['entities'] = {};
+  let detectedIntent: SearchIntent['intent'] = 'general';
+  let contextLabel = `Search • ${norm}`;
+  const searchQueriesSet = new Set<string>([norm]);
+
+  // Known Artists
   const knownArtists = [
     'Arijit Singh', 'A.R. Rahman', 'Kumar Sanu', 'Lata Mangeshkar', 'Atif Aslam',
     'Shreya Ghoshal', 'Sonu Nigam', 'Badshah', 'Kishore Kumar', 'Neha Kakkar',
     'Jubin Nautiyal', 'Diljit Dosanjh', 'Darshan Raval', 'Pritam', 'Ankit Tiwari',
-    'Himesh Reshammiya', 'Shankar Mahadevan', 'Alka Yagnik', 'Udit Narayan', 'K.K.', 'Sid Sriram'
+    'Himesh Reshammiya', 'Shankar Mahadevan', 'Alka Yagnik', 'Udit Narayan', 'K.K.',
+    'Sid Sriram', 'Yo Yo Honey Singh', 'Sunidhi Chauhan', 'Mohit Chauhan', 'Jagjit Singh',
+    'Asha Bhosle', 'Mohammad Rafi', 'R.D. Burman', 'Gulzar', 'Vishal-Shekhar', 'Sachin-Jigar'
   ];
   for (const artist of knownArtists) {
     if (lower.includes(artist.toLowerCase())) {
-      return {
-        correctedQuery: artist,
-        type: 'artist',
-        contextLabel: `Artist • ${artist}`,
-        targetQueries: [norm, `${artist} songs`, `${artist} hits`]
-      };
+      entities.artist = artist;
+      detectedIntent = 'artist';
+      contextLabel = `Artist • ${artist}`;
+      searchQueriesSet.add(artist);
+      searchQueriesSet.add(`${artist} songs`);
+      searchQueriesSet.add(`${artist} hits`);
+      break;
     }
   }
 
+  // Known Movies / Albums
   const knownMovies = [
     'Housefull 4', 'Sanam Teri Kasam', 'Kabir Singh', 'Aashiqui 2', 'Animal',
-    'Jawan', 'Pathaan', 'Brahmastra', 'Rockstar', 'Dilwale', 'Shershaah', 'Sita Ramam', 'Pushpa', 'KGF', 'RRR'
+    'Jawan', 'Pathaan', 'Brahmastra', 'Rockstar', 'Dilwale', 'Shershaah', 'Sita Ramam',
+    'Pushpa', 'KGF', 'RRR', 'Yeh Jawaani Hai Deewani', 'Kal Ho Naa Ho', 'Jab We Met'
   ];
   for (const movie of knownMovies) {
     if (lower.includes(movie.toLowerCase())) {
-      return {
-        correctedQuery: movie,
-        type: 'movie',
-        contextLabel: `Movie • ${movie}`,
-        targetQueries: [norm, `${movie} soundtrack`, `${movie} songs`]
-      };
+      entities.movie = movie;
+      if (detectedIntent === 'artist') {
+        detectedIntent = 'combination';
+        contextLabel = `${entities.artist} • ${movie}`;
+      } else {
+        detectedIntent = 'movie';
+        contextLabel = `Movie • ${movie}`;
+      }
+      searchQueriesSet.add(movie);
+      searchQueriesSet.add(`${movie} soundtrack`);
+      searchQueriesSet.add(`${movie} songs`);
+      break;
     }
   }
 
-  if (lower.includes('ram') || lower.includes('devotional') || lower.includes('bhajan') || lower.includes('ganpati') || lower.includes('shiv') || lower.includes('krishna') || lower.includes('hanuman') || lower.includes('aarti') || lower.includes('mantra') || lower.includes('chalisa')) {
-    return {
-      correctedQuery: norm,
-      type: 'genre',
-      contextLabel: 'Genre • Devotional',
-      targetQueries: [norm, 'devotional songs', 'popular bhajan']
-    };
+  // Languages (Roman Marathi, Roman Punjabi, Hindi)
+  if (lower.includes('marathi') || lower.includes('madhla') || lower.includes('madhle') || lower.includes('gani') || lower.includes('che') || lower.includes('pahijet')) {
+    entities.language = 'Marathi';
+    searchQueriesSet.add(`${norm} marathi`);
+    searchQueriesSet.add(`marathi ${norm}`);
+  } else if (lower.includes('punjabi')) {
+    entities.language = 'Punjabi';
+    searchQueriesSet.add(`${norm} punjabi`);
+  } else if (lower.includes('hindi')) {
+    entities.language = 'Hindi';
   }
 
+  // Eras
   if (lower.includes('90s') || lower.includes('90\'s') || lower.includes('1990')) {
-    return {
-      correctedQuery: norm,
-      type: 'era',
-      contextLabel: 'Era • 90s Hits',
-      targetQueries: [norm, '90s hindi songs', '90s romantic hits']
-    };
-  }
-  if (lower.includes('80s') || lower.includes('80\'s') || lower.includes('1980')) {
-    return {
-      correctedQuery: norm,
-      type: 'era',
-      contextLabel: 'Era • 80s Hits',
-      targetQueries: [norm, '80s hindi songs']
-    };
-  }
-  if (lower.includes('retro') || lower.includes('old songs')) {
-    return {
-      correctedQuery: norm,
-      type: 'era',
-      contextLabel: 'Era • Retro Classics',
-      targetQueries: [norm, 'old hindi classics']
-    };
+    entities.era = '90s';
+    if (detectedIntent === 'general') {
+      detectedIntent = 'era';
+      contextLabel = 'Era • 90s Hits';
+    }
+    searchQueriesSet.add('90s hindi songs');
+    searchQueriesSet.add('90s romantic hits');
+  } else if (lower.includes('80s') || lower.includes('80\'s') || lower.includes('1980')) {
+    entities.era = '80s';
+    if (detectedIntent === 'general') {
+      detectedIntent = 'era';
+      contextLabel = 'Era • 80s Hits';
+    }
+    searchQueriesSet.add('80s hindi songs');
+  } else if (lower.includes('retro') || lower.includes('old songs') || lower.includes('old classics')) {
+    entities.era = 'Retro';
+    if (detectedIntent === 'general') {
+      detectedIntent = 'era';
+      contextLabel = 'Era • Retro Classics';
+    }
+    searchQueriesSet.add('old hindi classics');
   }
 
+  // Moods & Themes
   if (lower.includes('sad')) {
-    return {
-      correctedQuery: norm,
-      type: 'mood',
-      contextLabel: 'Mood • Sad',
-      targetQueries: [norm, 'sad hindi songs']
-    };
+    entities.mood = 'Sad';
+    searchQueriesSet.add('sad songs');
+    searchQueriesSet.add('sad hindi songs');
+  } else if (lower.includes('romantic') || lower.includes('love')) {
+    entities.mood = 'Romantic';
+    searchQueriesSet.add('romantic songs');
+    searchQueriesSet.add('love songs');
+  } else if (lower.includes('party') || lower.includes('dance') || lower.includes('dj')) {
+    entities.mood = 'Party';
+    searchQueriesSet.add('party songs');
+    searchQueriesSet.add('dance songs');
+  } else if (lower.includes('friendship') || lower.includes('dosti') || lower.includes('yaari') || lower.includes('yaar')) {
+    entities.theme = 'Friendship';
+    if (detectedIntent === 'general') {
+      detectedIntent = 'theme';
+      contextLabel = 'Theme • Friendship';
+    }
+    searchQueriesSet.add('friendship songs');
+    searchQueriesSet.add('dosti songs');
+    searchQueriesSet.add('yaari songs');
+  } else if (lower.includes('ram') || lower.includes('devotional') || lower.includes('bhajan') || lower.includes('ganpati') || lower.includes('shiv') || lower.includes('krishna') || lower.includes('bhakti')) {
+    entities.genre = 'Devotional';
+    if (detectedIntent === 'general') {
+      detectedIntent = 'genre';
+      contextLabel = 'Genre • Devotional';
+    }
+    searchQueriesSet.add('devotional songs');
+    searchQueriesSet.add('bhajan');
+  } else if (lower.includes('gym') || lower.includes('workout') || lower.includes('motivational')) {
+    entities.theme = 'Gym';
+    if (detectedIntent === 'general') {
+      detectedIntent = 'activity';
+      contextLabel = 'Activity • Gym & Workout';
+    }
+    searchQueriesSet.add('gym workout songs');
   }
-  if (lower.includes('happy')) {
-    return {
-      correctedQuery: norm,
-      type: 'mood',
-      contextLabel: 'Mood • Happy',
-      targetQueries: [norm, 'happy upbeat songs']
-    };
-  }
-  if (lower.includes('romantic') || lower.includes('love')) {
-    return {
-      correctedQuery: norm,
-      type: 'mood',
-      contextLabel: 'Mood • Romantic',
-      targetQueries: [norm, 'romantic love songs']
-    };
-  }
-  if (lower.includes('party') || lower.includes('dance') || lower.includes('dj')) {
-    return {
-      correctedQuery: norm,
-      type: 'mood',
-      contextLabel: 'Mood • Party',
-      targetQueries: [norm, 'party dance tracks']
-    };
+
+  // Lyrics / Line Search Detection
+  if (lower.includes('tum hi ho') || lower.includes('mere paas') || lower.includes('jisme') || lower.includes('line') || lower.includes('wo gana')) {
+    detectedIntent = 'lyrics';
+    entities.lyrics = norm;
+    contextLabel = 'Lyrics • Matching Line Search';
+    const cleanLyricPhrase = lower.replace(/wo gana jisme|that song jisme|line jisme/gi, '').trim();
+    if (cleanLyricPhrase) {
+      searchQueriesSet.add(cleanLyricPhrase);
+      const parts = cleanLyricPhrase.split(/\s+/);
+      if (parts.length >= 2) {
+        searchQueriesSet.add(parts.slice(0, 3).join(' '));
+      }
+    }
   }
 
   return {
-    correctedQuery: norm,
-    type: 'general',
-    contextLabel: `Search • ${norm}`,
-    targetQueries: [norm]
+    normalizedQuery: norm,
+    intent: detectedIntent,
+    entities,
+    searchQueries: Array.from(searchQueriesSet).slice(0, 5),
+    contextLabel,
+    confidence: 0.8,
   };
 }
 
@@ -146,23 +220,47 @@ async function getAISearchIntent(query: string): Promise<SearchIntent> {
   }
 
   try {
-    const ai = new GoogleGenAI({ apiKey });
+    const ai = new GoogleGenAI({
+      apiKey,
+      httpOptions: {
+        headers: {
+          'User-Agent': 'aistudio-build',
+        },
+      },
+    });
 
     const geminiPromise = ai.models.generateContent({
-      model: 'gemini-2.0-flash',
-      contents: `You are an AI music intent parser for Sonic Current music player.
-Analyze search query: "${query}".
-Correct any spelling errors or typos (e.g. "arjit singh" -> "Arijit Singh", "mre ram" -> "Mere Ram", "sanam teri kasm" -> "Sanam Teri Kasam", "houseful 4" -> "Housefull 4").
-Identify intent type: "artist", "album", "movie", "genre", "mood", "era", or "general".
-Create a short clean contextLabel (e.g. "Artist • Arijit Singh", "Movie • Housefull 4", "Genre • Devotional", "Era • 90s", "Mood • Romantic", "Search • <Query>").
-Provide 1-2 targeted search query strings to fetch real music results.
+      model: 'gemini-3.6-flash',
+      contents: `You are the DEEP AI MUSIC SEARCH INTELLIGENCE ENGINE for Sonic Current player.
+Analyze user music query: "${query}".
 
-Output JSON only in this format:
+TASK:
+1. Parse deep user intent: "artist", "album", "movie", "lyrics", "genre", "mood", "theme", "era", "language", "activity", "occasion", "relationship", "combination", or "general".
+2. Extract entities: artist, album, movie, genre, mood, theme, era, language, lyrics.
+3. Detect lyrics fragments or line searches (e.g., "tum hi ho humesha mere paas", "wo line jisme dil tootne ki baat hai"). Extract core lyric keywords.
+4. Correct spelling errors and typos (e.g. "arjit singh" -> "Arijit Singh", "mre ram" -> "Mere Ram", "sanam teri kasm" -> "Sanam Teri Kasam", "houseful 4" -> "Housefull 4").
+5. Handle Hinglish, Roman Marathi, Roman Punjabi (e.g., "90s madhla sad song", "arijit che romantic songs", "yaar dosti wale songs", "ganpati che gani").
+6. Generate 3 to 5 distinct, highly targeted search query strategies to fetch REAL songs from JioSaavn catalog.
+7. Create a clean human-readable context label (e.g. "Artist • Arijit Singh", "Movie • Housefull 4", "Lyrics • Matching Lyric Search", "Theme • Friendship", "Era • 90s Hits", "Mood • Romantic").
+
+Return strictly JSON:
 {
-  "correctedQuery": "string",
-  "type": "artist"|"album"|"movie"|"genre"|"mood"|"era"|"general",
+  "normalizedQuery": "string",
+  "intent": "artist"|"album"|"movie"|"lyrics"|"genre"|"mood"|"theme"|"era"|"language"|"activity"|"occasion"|"relationship"|"combination"|"general",
+  "entities": {
+    "artist": "string or null",
+    "album": "string or null",
+    "movie": "string or null",
+    "genre": "string or null",
+    "mood": "string or null",
+    "theme": "string or null",
+    "era": "string or null",
+    "language": "string or null",
+    "lyrics": "string or null"
+  },
+  "searchQueries": ["string"],
   "contextLabel": "string",
-  "targetQueries": ["string"]
+  "confidence": 0.95
 }`,
       config: {
         responseMimeType: 'application/json',
@@ -170,7 +268,7 @@ Output JSON only in this format:
     });
 
     const timeoutPromise = new Promise<never>((_, reject) =>
-      setTimeout(() => reject(new Error('AI Intent timeout')), 2200)
+      setTimeout(() => reject(new Error('AI Search Intelligence timeout')), 2800)
     );
 
     const res: any = await Promise.race([geminiPromise, timeoutPromise]);
@@ -179,22 +277,24 @@ Output JSON only in this format:
 
     if (
       parsed &&
-      typeof parsed.correctedQuery === 'string' &&
-      Array.isArray(parsed.targetQueries) &&
-      parsed.targetQueries.length > 0
+      typeof parsed.normalizedQuery === 'string' &&
+      Array.isArray(parsed.searchQueries) &&
+      parsed.searchQueries.length > 0
     ) {
       const intent: SearchIntent = {
-        correctedQuery: parsed.correctedQuery,
-        type: parsed.type || 'general',
-        contextLabel: parsed.contextLabel || `Search • ${parsed.correctedQuery}`,
-        targetQueries: parsed.targetQueries.slice(0, 2),
+        normalizedQuery: parsed.normalizedQuery,
+        intent: parsed.intent || 'general',
+        entities: parsed.entities || {},
+        searchQueries: parsed.searchQueries.slice(0, 5),
+        contextLabel: parsed.contextLabel || `Search • ${parsed.normalizedQuery}`,
+        confidence: typeof parsed.confidence === 'number' ? parsed.confidence : 0.9,
       };
 
       aiSearchCache.set(normKey, { intent, timestamp: Date.now() });
       return intent;
     }
   } catch (err: any) {
-    console.log('[AI Search Intent Fallback]:', err?.message || err);
+    console.log('[AI Search Intelligence Fallback]:', err?.message || err);
   }
 
   const fallbackIntent = getDeterministicSearchIntent(query);
@@ -415,6 +515,110 @@ async function searchSongsJioSaavn(query: string, page: number = 1) {
   }
 }
 
+function scoreAndRankSongs(rawSongs: any[], query: string, intent: SearchIntent): any[] {
+  const normQuery = query.toLowerCase().trim();
+  const queryTokens = normQuery.split(/\s+/).filter((t) => t.length > 1);
+
+  const targetArtist = (intent.entities?.artist || '').toLowerCase().trim();
+  const targetMovie = (intent.entities?.movie || intent.entities?.album || '').toLowerCase().trim();
+  const targetLyrics = (intent.entities?.lyrics || '').toLowerCase().trim();
+  const targetMood = (intent.entities?.mood || intent.entities?.genre || intent.entities?.theme || '').toLowerCase().trim();
+
+  const scored = rawSongs.map((song, idx) => {
+    let score = 0;
+    const normTitle = (song.title || song.song || '').toLowerCase().trim();
+    const normArtist = (song.artist || song.singers || '').toLowerCase().trim();
+    const normAlbum = (song.album || '').toLowerCase().trim();
+
+    // 1. Title Exact Match & Substring
+    if (normTitle === normQuery) {
+      score += 100;
+    } else if (normTitle.includes(normQuery)) {
+      score += 65;
+    } else if (normQuery.includes(normTitle) && normTitle.length > 3) {
+      score += 45;
+    }
+
+    // 2. Token overlap with Title
+    let titleMatches = 0;
+    for (const token of queryTokens) {
+      if (normTitle.includes(token)) titleMatches++;
+    }
+    if (queryTokens.length > 0) {
+      score += (titleMatches / queryTokens.length) * 40;
+    }
+
+    // 3. Artist Matching
+    if (targetArtist) {
+      if (normArtist.includes(targetArtist)) {
+        score += 60;
+      } else if (targetArtist.includes(normArtist) && normArtist.length > 3) {
+        score += 35;
+      }
+    } else {
+      for (const token of queryTokens) {
+        if (normArtist.includes(token)) score += 15;
+      }
+    }
+
+    // 4. Movie / Album Matching
+    if (targetMovie) {
+      if (normAlbum.includes(targetMovie) || normTitle.includes(targetMovie)) {
+        score += 55;
+      }
+    }
+
+    // 5. Lyrics / Line Matching
+    if (intent.intent === 'lyrics' || targetLyrics) {
+      const lQuery = targetLyrics || normQuery;
+      const lTokens = lQuery.split(/\s+/).filter((t) => t.length > 2);
+      let lMatches = 0;
+      for (const token of lTokens) {
+        if (normTitle.includes(token) || normAlbum.includes(token)) {
+          lMatches++;
+        }
+      }
+      score += lMatches * 25;
+    }
+
+    // 6. Mood / Theme / Genre Matching
+    if (targetMood) {
+      if (normTitle.includes(targetMood) || normAlbum.includes(targetMood) || normArtist.includes(targetMood)) {
+        score += 30;
+      }
+    }
+
+    // 7. Original Catalog Order Bias
+    const positionBonus = Math.max(0, 20 - idx * 0.4);
+    score += positionBonus;
+
+    return { song, score };
+  });
+
+  scored.sort((a, b) => b.score - a.score);
+
+  const seenIds = new Set<string>();
+  const seenPairs = new Set<string>();
+  const deduplicatedSongs: any[] = [];
+
+  for (const item of scored) {
+    const s = item.song;
+    const id = String(s.id);
+    const pairKey = `${(s.title || '').toLowerCase().trim()}_${(s.artist || '').toLowerCase().trim()}`;
+
+    if (!seenIds.has(id) && !seenPairs.has(pairKey)) {
+      seenIds.add(id);
+      seenPairs.add(pairKey);
+      deduplicatedSongs.push({
+        ...s,
+        contextLabel: intent.contextLabel,
+      });
+    }
+  }
+
+  return deduplicatedSongs;
+}
+
 export const app = express();
 const PORT = 3000;
 
@@ -461,9 +665,9 @@ app.get(['/result', '/result/', '/api/result', '/api/search', '/api/jiosaavn'], 
     try {
       const intent = await getAISearchIntent(query);
       const targetQueries =
-        intent.targetQueries && intent.targetQueries.length > 0
-          ? intent.targetQueries
-          : [intent.correctedQuery || query];
+        intent.searchQueries && intent.searchQueries.length > 0
+          ? intent.searchQueries
+          : [intent.normalizedQuery || query];
 
       let allSongs: any[] = [];
       for (const tq of targetQueries) {
@@ -473,27 +677,28 @@ app.get(['/result', '/result/', '/api/result', '/api/search', '/api/jiosaavn'], 
         }
       }
 
+      // If broad intent or discovery (artist/movie/album/theme/genre), expand catalog by querying page 2 on pageParam 1
+      if (
+        pageParam === 1 &&
+        (intent.intent === 'artist' ||
+          intent.intent === 'movie' ||
+          intent.intent === 'album' ||
+          intent.intent === 'theme' ||
+          intent.intent === 'genre' ||
+          intent.intent === 'combination')
+      ) {
+        const primaryQuery = targetQueries[0] || query;
+        const page2List = await searchSongsJioSaavn(primaryQuery, 2);
+        if (page2List.length > 0) {
+          allSongs.push(...page2List);
+        }
+      }
+
       if (allSongs.length === 0) {
         allSongs = await searchSongsJioSaavn(query, pageParam);
       }
 
-      // Deduplicate by song ID and title+artist pair
-      const seenIds = new Set<string>();
-      const seenPairs = new Set<string>();
-      const deduplicatedSongs: any[] = [];
-
-      for (const song of allSongs) {
-        const id = String(song.id);
-        const pairKey = `${(song.title || '').toLowerCase().trim()}_${(song.artist || '').toLowerCase().trim()}`;
-        if (!seenIds.has(id) && !seenPairs.has(pairKey)) {
-          seenIds.add(id);
-          seenPairs.add(pairKey);
-          deduplicatedSongs.push({
-            ...song,
-            contextLabel: intent.contextLabel,
-          });
-        }
-      }
+      const deduplicatedSongs = scoreAndRankSongs(allSongs, query, intent);
 
       res.setHeader('Cache-Control', 'public, max-age=300, stale-while-revalidate=60');
       res.setHeader('X-Context-Label', encodeURIComponent(intent.contextLabel || ''));
