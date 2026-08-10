@@ -20,6 +20,7 @@ import {
 import { Song, RepeatMode } from '../types';
 import { QueueCarousel } from './QueueCarousel';
 import { AudioProgressBar } from './AudioProgressBar';
+import { DancingBaby } from './DancingBaby';
 
 interface FullPlayerModalProps {
   isOpen: boolean;
@@ -98,7 +99,7 @@ export const FullPlayerModal: React.FC<FullPlayerModalProps> = ({
         <button
           onClick={onClose}
           aria-label="Dismiss full player"
-          className="p-2.5 rounded-full bg-white/10 hover:bg-white/20 border border-white/10 text-slate-200 hover:text-white backdrop-blur-md transition shadow-md"
+          className="p-2.5 rounded-full bg-white/10 hover:bg-white/20 border border-white/10 text-slate-200 hover:text-white backdrop-blur-md transition shadow-md cursor-pointer"
         >
           <ChevronDown className="w-5 h-5" />
         </button>
@@ -115,7 +116,7 @@ export const FullPlayerModal: React.FC<FullPlayerModalProps> = ({
         <button
           onClick={() => onToggleFavorite(currentSong)}
           aria-label={isFavorite ? 'Remove from Liked' : 'Like song'}
-          className={`p-2.5 rounded-full border backdrop-blur-md transition shadow-md ${
+          className={`p-2.5 rounded-full border backdrop-blur-md transition shadow-md cursor-pointer ${
             isFavorite
               ? 'text-rose-400 border-rose-500/40 bg-rose-500/15'
               : 'text-slate-300 border-white/10 bg-white/10 hover:text-rose-400'
@@ -127,8 +128,8 @@ export const FullPlayerModal: React.FC<FullPlayerModalProps> = ({
 
       {/* Main Body Grid */}
       <div className="relative z-10 max-w-3xl mx-auto w-full my-auto py-4 sm:py-6 grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-10 items-center">
-        {/* Centered Album Artwork */}
-        <div className="flex justify-center">
+        {/* Centered Album Artwork & Dancing Baby Companion */}
+        <div className="flex flex-col items-center justify-center relative">
           <div className="relative w-56 h-56 sm:w-72 sm:h-72 md:w-80 md:h-80 rounded-3xl bg-slate-900 overflow-hidden shadow-2xl border border-white/20 group">
             {currentSong.artwork ? (
               <img
@@ -150,6 +151,11 @@ export const FullPlayerModal: React.FC<FullPlayerModalProps> = ({
                 <Check className="w-3.5 h-3.5" /> Offline
               </div>
             )}
+          </div>
+
+          {/* Dancing Baby Companion */}
+          <div className="absolute -bottom-6 -right-2 sm:-right-4 md:-right-6 z-20">
+            <DancingBaby isPlaying={isPlaying} />
           </div>
         </div>
 
@@ -187,7 +193,7 @@ export const FullPlayerModal: React.FC<FullPlayerModalProps> = ({
             <button
               onClick={onToggleShuffle}
               aria-label={shuffleMode ? 'Disable shuffle' : 'Enable shuffle'}
-              className={`p-2.5 rounded-full transition ${
+              className={`p-2.5 rounded-full transition cursor-pointer ${
                 shuffleMode
                   ? 'text-amber-400 bg-amber-500/20 border border-amber-400/40'
                   : 'text-slate-400 hover:text-white'
@@ -199,7 +205,7 @@ export const FullPlayerModal: React.FC<FullPlayerModalProps> = ({
             <button
               onClick={onPrevious}
               aria-label="Previous track"
-              className="p-2.5 text-slate-200 hover:text-white transition active:scale-90"
+              className="p-2.5 text-slate-200 hover:text-white transition active:scale-90 cursor-pointer"
             >
               <SkipBack className="w-6 h-6 sm:w-7 sm:h-7 fill-current" />
             </button>
@@ -207,7 +213,7 @@ export const FullPlayerModal: React.FC<FullPlayerModalProps> = ({
             <button
               onClick={onPlayPause}
               aria-label={isPlaying ? 'Pause' : 'Play'}
-              className="w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-amber-500 hover:bg-amber-400 text-slate-950 flex items-center justify-center shadow-xl shadow-amber-500/30 hover:scale-105 active:scale-95 transition duration-200 font-bold"
+              className="w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-amber-500 hover:bg-amber-400 text-slate-950 flex items-center justify-center shadow-xl shadow-amber-500/30 hover:scale-105 active:scale-95 transition duration-200 font-bold cursor-pointer"
             >
               {isPlaying ? (
                 <Pause className="w-7 h-7 sm:w-8 sm:h-8 fill-current" />
@@ -219,7 +225,7 @@ export const FullPlayerModal: React.FC<FullPlayerModalProps> = ({
             <button
               onClick={onNext}
               aria-label="Next track"
-              className="p-2.5 text-slate-200 hover:text-white transition active:scale-90"
+              className="p-2.5 text-slate-200 hover:text-white transition active:scale-90 cursor-pointer"
             >
               <SkipForward className="w-6 h-6 sm:w-7 sm:h-7 fill-current" />
             </button>
@@ -227,7 +233,7 @@ export const FullPlayerModal: React.FC<FullPlayerModalProps> = ({
             <button
               onClick={onToggleRepeat}
               aria-label={`Repeat mode ${repeatMode}`}
-              className={`p-2.5 rounded-full transition ${
+              className={`p-2.5 rounded-full transition cursor-pointer ${
                 repeatMode !== 'off'
                   ? 'text-amber-400 bg-amber-500/20 border border-amber-400/40'
                   : 'text-slate-400 hover:text-white'
@@ -247,7 +253,7 @@ export const FullPlayerModal: React.FC<FullPlayerModalProps> = ({
             <button
               onClick={() => onDownload(currentSong)}
               disabled={isDownloading}
-              className={`flex items-center gap-2 px-3.5 py-2 rounded-xl border text-xs font-bold transition backdrop-blur-md ${
+              className={`flex items-center gap-2 px-3.5 py-2 rounded-xl border text-xs font-bold transition backdrop-blur-md cursor-pointer ${
                 isDownloaded
                   ? 'bg-emerald-500/20 border-emerald-500/40 text-emerald-400'
                   : 'bg-white/10 border-white/10 text-slate-200 hover:bg-white/15'
@@ -273,7 +279,7 @@ export const FullPlayerModal: React.FC<FullPlayerModalProps> = ({
               <button
                 onClick={onToggleMute}
                 aria-label={isMuted ? 'Unmute' : 'Mute'}
-                className="p-1.5 text-slate-400 hover:text-white transition"
+                className="p-1.5 text-slate-400 hover:text-white transition cursor-pointer"
               >
                 {isMuted || volume === 0 ? (
                   <VolumeX className="w-4 h-4 text-red-400" />
@@ -311,4 +317,5 @@ export const FullPlayerModal: React.FC<FullPlayerModalProps> = ({
     </div>
   );
 };
+
 

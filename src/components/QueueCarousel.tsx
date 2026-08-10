@@ -1,4 +1,4 @@
-import React, { useRef } from 'react';
+import React, { useRef, useEffect } from 'react';
 import { ChevronLeft, ChevronRight, Play, Music2, ListMusic, Sparkles } from 'lucide-react';
 import { Song } from '../types';
 
@@ -19,6 +19,19 @@ export const QueueCarousel: React.FC<QueueCarouselProps> = ({
 }) => {
   const scrollRef = useRef<HTMLDivElement>(null);
 
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const handleWheel = (e: WheelEvent) => {
+      if (e.deltaY !== 0 && Math.abs(e.deltaX) < Math.abs(e.deltaY)) {
+        e.preventDefault();
+        el.scrollLeft += e.deltaY;
+      }
+    };
+    el.addEventListener('wheel', handleWheel, { passive: false });
+    return () => el.removeEventListener('wheel', handleWheel);
+  }, []);
+
   const scroll = (direction: 'left' | 'right') => {
     if (scrollRef.current) {
       const scrollAmount = direction === 'left' ? -300 : 300;
@@ -27,6 +40,7 @@ export const QueueCarousel: React.FC<QueueCarouselProps> = ({
   };
 
   if (queue.length === 0) return null;
+
 
   return (
     <div className="w-full space-y-3 py-2">

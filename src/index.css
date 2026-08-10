@@ -14,3 +14,65 @@
 .animate-wave-bar {
   animation: waveBar 1.2s ease-in-out infinite;
 }
+
+/* Dancing Baby Keyframe Animations */
+@keyframes babyDance {
+  0%, 100% {
+    transform: translateY(0px) rotate(0deg) scale(1);
+  }
+  25% {
+    transform: translateY(-5px) rotate(-3deg) scale(1.02);
+  }
+  50% {
+    transform: translateY(0px) rotate(0deg) scale(1);
+  }
+  75% {
+    transform: translateY(-5px) rotate(3deg) scale(1.02);
+  }
+}
+
+@keyframes babyArmLeft {
+  0%, 100% {
+    transform: rotate(0deg);
+  }
+  50% {
+    transform: rotate(-22deg);
+  }
+}
+
+@keyframes babyArmRight {
+  0%, 100% {
+    transform: rotate(0deg);
+  }
+  50% {
+    transform: rotate(22deg);
+  }
+}
+
+@keyframes babyHeadBob {
+  0%, 100% {
+    transform: rotate(0deg) translateY(0);
+  }
+  50% {
+    transform: rotate(5deg) translateY(2px);
+  }
+}
+
+.animate-baby-dance {
+  animation: babyDance 0.75s ease-in-out infinite;
+}
+
+.animate-baby-arm-left {
+  animation: babyArmLeft 0.75s ease-in-out infinite;
+  transform-origin: 40px 78px;
+}
+
+.animate-baby-arm-right {
+  animation: babyArmRight 0.75s ease-in-out infinite;
+  transform-origin: 80px 78px;
+}
+
+.animate-baby-head {
+  animation: babyHeadBob 0.75s ease-in-out infinite;
+  transform-origin: 60px 70px;
+}

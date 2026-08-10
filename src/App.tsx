@@ -92,6 +92,35 @@ export default function App() {
   // Network Offline State
   const [isOffline, setIsOffline] = useState(!navigator.onLine);
 
+  // Theme State
+  const [theme, setTheme] = useState<'light' | 'dark'>(() => {
+    try {
+      const saved = localStorage.getItem('sonic_current_theme');
+      if (saved === 'dark' || saved === 'light') return saved;
+      return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+    } catch {
+      return 'light';
+    }
+  });
+
+  useEffect(() => {
+    const root = document.documentElement;
+    if (theme === 'dark') {
+      root.classList.add('dark');
+    } else {
+      root.classList.remove('dark');
+    }
+    try {
+      localStorage.setItem('sonic_current_theme', theme);
+    } catch (e) {
+      console.warn('Error saving theme preference:', e);
+    }
+  }, [theme]);
+
+  const handleToggleTheme = useCallback(() => {
+    setTheme((prev) => (prev === 'dark' ? 'light' : 'dark'));
+  }, []);
+
   useEffect(() => {
     const handleOnline = () => setIsOffline(false);
     const handleOffline = () => setIsOffline(true);
@@ -957,7 +986,7 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col md:flex-row antialiased font-sans selection:bg-amber-400 selection:text-slate-950">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex flex-col md:flex-row antialiased font-sans selection:bg-amber-400 selection:text-slate-950 transition-colors duration-300">
       {/* Desktop Navigation Sidebar */}
       <Sidebar
         currentTab={currentTab}
@@ -969,7 +998,7 @@ export default function App() {
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col min-w-0 pb-32">
         {isOffline && (
-          <div className="bg-amber-500/10 border-b border-amber-500/20 px-4 py-2 text-center text-xs font-semibold text-amber-800 flex items-center justify-center gap-2">
+          <div className="bg-amber-500/10 border-b border-amber-500/20 px-4 py-2 text-center text-xs font-semibold text-amber-800 dark:text-amber-300 flex items-center justify-center gap-2">
             <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
             <span>Offline Mode Active — Downloaded songs & offline queue ready</span>
           </div>
@@ -977,6 +1006,8 @@ export default function App() {
         <HeaderBar
           currentTab={currentTab}
           onTabChange={setCurrentTab}
+          theme={theme}
+          onToggleTheme={handleToggleTheme}
         />
 
         <main className="flex-1 p-4 sm:p-6 md:p-8 max-w-7xl mx-auto w-full">
