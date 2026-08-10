@@ -1,4 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { App as CapApp } from '@capacitor/app';
+import { StatusBar, Style } from '@capacitor/status-bar';
 import {
   Song,
   DownloadedSong,
@@ -115,7 +117,43 @@ export default function App() {
     } catch (e) {
       console.warn('Error saving theme preference:', e);
     }
+    try {
+      StatusBar.setStyle({ style: theme === 'dark' ? Style.Dark : Style.Light }).catch(() => {});
+      StatusBar.setBackgroundColor({ color: theme === 'dark' ? '#0f172a' : '#ffffff' }).catch(() => {});
+    } catch {
+      // ignore on non-Capacitor web
+    }
   }, [theme]);
+
+  // Android Native Back Button listener
+  useEffect(() => {
+    let listener: any;
+    const setupBackButton = async () => {
+      try {
+        listener = await CapApp.addListener('backButton', ({ canGoBack }) => {
+          if (isFullPlayerOpen) {
+            setIsFullPlayerOpen(false);
+          } else if (isQueueOpen) {
+            setIsQueueOpen(false);
+          } else if (currentTab !== 'home') {
+            setCurrentTab('home');
+          } else if (canGoBack) {
+            window.history.back();
+          } else {
+            CapApp.minimizeApp();
+          }
+        });
+      } catch {
+        // ignore on web
+      }
+    };
+    setupBackButton();
+    return () => {
+      if (listener && listener.remove) {
+        listener.remove();
+      }
+    };
+  }, [isFullPlayerOpen, isQueueOpen, currentTab]);
 
   const handleToggleTheme = useCallback(() => {
     setTheme((prev) => (prev === 'dark' ? 'light' : 'dark'));

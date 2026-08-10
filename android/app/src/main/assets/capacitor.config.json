@@ -1,0 +1,15 @@
+{
+	"appId": "com.surajkhandagale.freemusic",
+	"appName": "FREE MUSIC",
+	"webDir": "dist",
+	"server": {
+		"androidScheme": "https"
+	},
+	"plugins": {
+		"SplashScreen": {
+			"launchShowDuration": 1500,
+			"backgroundColor": "#0f172a",
+			"showSpinner": false
+		}
+	}
+}
