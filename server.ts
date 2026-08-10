@@ -1,6 +1,5 @@
 import express from 'express';
 import path from 'path';
-import { createServer as createViteServer } from 'vite';
 import CryptoJS from 'crypto-js';
 import { GoogleGenAI } from '@google/genai';
 
@@ -430,9 +429,13 @@ app.use((req, res, next) => {
     return;
   }
 
+  // Handle Netlify function path prefixing
   if (req.url.startsWith('/.netlify/functions/api')) {
-    req.url = req.url.replace('/.netlify/functions/api', '');
+    req.url = req.url.substring('/.netlify/functions/api'.length);
     if (!req.url.startsWith('/')) req.url = '/' + req.url;
+  }
+  if (req.url.startsWith('/api/api/')) {
+    req.url = req.url.substring('/api'.length);
   }
   next();
 });
@@ -612,16 +615,10 @@ app.get(['/result', '/result/', '/api/result', '/api/search', '/api/jiosaavn'], 
       if (acceptRanges) res.setHeader('Accept-Ranges', acceptRanges);
       res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
 
-      if (response.body) {
-        const reader = response.body.getReader();
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-          res.write(Buffer.from(value));
-        }
-        res.end();
-        return;
-      }
+      const arrayBuffer = await response.arrayBuffer();
+      const buffer = Buffer.from(arrayBuffer);
+      res.send(buffer);
+      return;
     } catch (error) {
       console.error('[Audio Proxy Stream Error]:', error);
       res.status(502).json({ error: 'Failed to stream audio file' });
@@ -632,6 +629,7 @@ async function startServer() {
   // Vite middleware for dev / static server for standalone production
   if (!process.env.NETLIFY && !process.env.AWS_LAMBDA_FUNCTION_NAME && !process.env.LAMBDA_TASK_ROOT && !process.env.IS_NETLIFY_FUNCTION) {
     if (process.env.NODE_ENV !== 'production') {
+      const { createServer: createViteServer } = await import('vite');
       const vite = await createViteServer({
         server: { middlewareMode: true },
         appType: 'spa',
