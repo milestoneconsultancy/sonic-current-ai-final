@@ -270,7 +270,7 @@ export const AccountView: React.FC<AccountViewProps> = ({
       {/* Branding Footer */}
       <div className="text-center py-6 space-y-1.5 border-t border-slate-200/80">
         <div className="text-xs font-black text-slate-950 tracking-wider uppercase">
-          SONIC CURRENT
+          FREE MUSIC
         </div>
         <p className="text-[11px] font-extrabold text-amber-700 tracking-wider uppercase">
           SURAJ KHANDAGALE

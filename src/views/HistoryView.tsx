@@ -113,7 +113,7 @@ export const HistoryView: React.FC<HistoryViewProps> = ({
               <div className="space-y-1">
                 <h4 className="text-lg font-extrabold text-slate-900">No Listening History Yet</h4>
                 <p className="text-xs text-slate-500 font-medium leading-relaxed max-w-sm mx-auto">
-                  Tracks you stream on Sonic Current will automatically appear here so you can easily jump back to your recent favorites.
+                  Tracks you stream on Free Music will automatically appear here so you can easily jump back to your recent favorites.
                 </p>
               </div>
             </div>

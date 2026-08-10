@@ -112,7 +112,7 @@ export const FullPlayerModal: React.FC<FullPlayerModalProps> = ({
 
         <div className="text-center flex flex-col items-center">
           <span className="text-base font-black tracking-tight text-slate-900 leading-none">
-            SONIC CURRENT
+            FREE MUSIC
           </span>
           <span className="text-[10px] font-bold text-amber-600 tracking-wider uppercase mt-1">
             SURAJ KHANDAGALE
@@ -280,7 +280,7 @@ export const FullPlayerModal: React.FC<FullPlayerModalProps> = ({
 
       {/* Footer Branding */}
       <div className="relative z-10 text-center text-xs text-slate-500 font-bold uppercase tracking-wider py-4">
-        SONIC CURRENT • <span className="text-amber-600">SURAJ KHANDAGALE</span>
+        FREE MUSIC • <span className="text-amber-600">SURAJ KHANDAGALE</span>
       </div>
     </div>
   );

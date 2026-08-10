@@ -54,7 +54,7 @@ export const LoginView: React.FC<LoginViewProps> = ({
             ⚡
           </div>
           <div className="space-y-0.5">
-            <h1 className="text-2xl font-black text-slate-950 tracking-tight">SONIC CURRENT</h1>
+            <h1 className="text-2xl font-black text-slate-950 tracking-tight">FREE MUSIC</h1>
             <p className="text-[11px] font-extrabold text-amber-700 tracking-wider uppercase">
               SURAJ KHANDAGALE
             </p>

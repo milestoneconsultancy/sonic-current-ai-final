@@ -1,6 +1,7 @@
-import React from 'react';
-import { Search, Heart, Download, Clock, Music, Sparkles, Play, Compass } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { Search, Heart, Download, Clock, Sparkles, Play, Flame } from 'lucide-react';
 import { Song, TabType, RecentlyPlayedItem } from '../types';
+import { SongCard } from '../components/SongCard';
 import { SongListItem } from '../components/SongListItem';
 
 interface HomeViewProps {
@@ -12,6 +13,7 @@ interface HomeViewProps {
   downloadedSet: Set<string>;
   downloadingSet: Set<string>;
   onPlaySong: (song: Song) => void;
+  onPlayAll: (songs: Song[]) => void;
   onToggleFavorite: (song: Song) => void;
   onDownloadSong: (song: Song) => void;
   onAddToQueue: (song: Song) => void;
@@ -26,112 +28,173 @@ export const HomeView: React.FC<HomeViewProps> = ({
   downloadedSet,
   downloadingSet,
   onPlaySong,
+  onPlayAll,
   onToggleFavorite,
   onDownloadSong,
   onAddToQueue,
 }) => {
-  const hasUserActivity = recentlyPlayed.length > 0 || favoritesSet.size > 0 || downloadedSet.size > 0;
+  const [trendingSongs, setTrendingSongs] = useState<Song[]>([]);
+  const [isLoadingTrending, setIsLoadingTrending] = useState<boolean>(true);
+
+  useEffect(() => {
+    let isMounted = true;
+    async function loadTrending() {
+      try {
+        const response = await fetch('/api/trending');
+        if (response.ok) {
+          const data = await response.json();
+          if (Array.isArray(data) && data.length > 0) {
+            const mapped: Song[] = data.map((item: any) => ({
+              id: String(item.id || ''),
+              title: String(item.title || item.song || 'Unknown Title'),
+              artist: String(item.artist || item.singers || 'Unknown Artist'),
+              album: String(item.album || ''),
+              duration: String(item.duration || '0'),
+              artwork: String(item.artwork || item.image || ''),
+              url: String(item.url || item.media_url || ''),
+              permaUrl: String(item.perma_url || ''),
+            }));
+            if (isMounted) {
+              setTrendingSongs(mapped);
+            }
+          }
+        }
+      } catch (err) {
+        console.error('Failed to load trending songs:', err);
+      } finally {
+        if (isMounted) setIsLoadingTrending(false);
+      }
+    }
+    loadTrending();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   return (
     <div className="space-y-8 pb-24">
-      {/* Brand Hero Banner */}
-      <div className="relative overflow-hidden rounded-3xl bg-white border border-slate-200/90 p-8 md:p-12 shadow-xs">
-        <div className="absolute top-0 right-0 w-96 h-96 bg-amber-500/5 blur-3xl rounded-full pointer-events-none" />
-
-        <div className="relative z-10 max-w-2xl space-y-6">
-          <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-amber-50 border border-amber-200/80 text-amber-800 text-[11px] font-mono font-bold uppercase tracking-wider">
-            <Sparkles className="w-3.5 h-3.5 text-amber-600" /> Premium Music Experience
-          </div>
-
-          <div className="space-y-1">
-            <h1 className="text-3xl sm:text-4xl md:text-5xl font-black tracking-tight text-slate-900 leading-none">
-              SONIC CURRENT
-            </h1>
-            <p className="text-xs sm:text-sm font-black text-amber-600 uppercase tracking-widest pt-1">
-              SURAJ KHANDAGALE
-            </p>
-          </div>
-
-          <p className="text-sm sm:text-base text-slate-600 leading-relaxed font-medium max-w-xl">
-            Stream high-fidelity music, search millions of tracks, build your queue, and save your favorites for offline playback.
-          </p>
-
-          <div className="flex flex-wrap items-center gap-3 pt-2">
-            <button
-              onClick={() => onTabChange('search')}
-              className="px-6 py-3.5 rounded-2xl bg-slate-900 text-white font-bold text-sm shadow-md hover:bg-slate-800 hover:scale-102 transition flex items-center gap-2.5"
-            >
-              <Search className="w-4 h-4 text-amber-400" /> Search Songs & Artists
-            </button>
-            <button
-              onClick={() => onTabChange('favorites')}
-              className="px-5 py-3.5 rounded-2xl bg-slate-100 border border-slate-200 text-slate-800 font-bold text-sm hover:bg-slate-200/80 transition flex items-center gap-2"
-            >
-              <Heart className="w-4 h-4 text-rose-500 fill-current" /> Liked Favorites ({favoritesSet.size})
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {/* Primary Discovery Navigation */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      {/* Quick Discovery Navigation Bar */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3.5">
         <div
           onClick={() => onTabChange('search')}
-          className="group p-5 rounded-2xl bg-white border border-slate-200/90 hover:border-amber-400 hover:bg-slate-50 cursor-pointer transition-all duration-200 space-y-2.5 shadow-xs"
+          className="group p-4 rounded-2xl bg-white border border-slate-200/90 hover:border-amber-400 hover:bg-slate-50 cursor-pointer transition-all duration-200 space-y-2 shadow-xs"
         >
-          <div className="w-10 h-10 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center group-hover:scale-110 transition-transform">
-            <Search className="w-5 h-5" />
+          <div className="w-9 h-9 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center group-hover:scale-110 transition-transform">
+            <Search className="w-4 h-4" />
           </div>
           <div>
-            <h3 className="font-bold text-sm text-slate-900 group-hover:text-amber-700 transition">Search Library</h3>
-            <p className="text-xs text-slate-500 font-medium mt-0.5">Find music instantly</p>
+            <h3 className="font-bold text-xs text-slate-900 group-hover:text-amber-700 transition">Search Library</h3>
+            <p className="text-[11px] text-slate-500 font-medium mt-0.5">Explore songs & artists</p>
           </div>
         </div>
 
         <div
           onClick={() => onTabChange('favorites')}
-          className="group p-5 rounded-2xl bg-white border border-slate-200/90 hover:border-rose-400 hover:bg-slate-50 cursor-pointer transition-all duration-200 space-y-2.5 shadow-xs"
+          className="group p-4 rounded-2xl bg-white border border-slate-200/90 hover:border-rose-400 hover:bg-slate-50 cursor-pointer transition-all duration-200 space-y-2 shadow-xs"
         >
-          <div className="w-10 h-10 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center group-hover:scale-110 transition-transform">
-            <Heart className="w-5 h-5 fill-current" />
+          <div className="w-9 h-9 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center group-hover:scale-110 transition-transform">
+            <Heart className="w-4 h-4 fill-current" />
           </div>
           <div>
-            <h3 className="font-bold text-sm text-slate-900 group-hover:text-rose-600 transition">Liked Favorites</h3>
-            <p className="text-xs text-slate-500 font-medium mt-0.5">{favoritesSet.size} tracks saved</p>
+            <h3 className="font-bold text-xs text-slate-900 group-hover:text-rose-600 transition">Liked Songs</h3>
+            <p className="text-[11px] text-slate-500 font-medium mt-0.5">{favoritesSet.size} tracks</p>
           </div>
         </div>
 
         <div
           onClick={() => onTabChange('downloads')}
-          className="group p-5 rounded-2xl bg-white border border-slate-200/90 hover:border-emerald-400 hover:bg-slate-50 cursor-pointer transition-all duration-200 space-y-2.5 shadow-xs"
+          className="group p-4 rounded-2xl bg-white border border-slate-200/90 hover:border-emerald-400 hover:bg-slate-50 cursor-pointer transition-all duration-200 space-y-2 shadow-xs"
         >
-          <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center group-hover:scale-110 transition-transform">
-            <Download className="w-5 h-5" />
+          <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center group-hover:scale-110 transition-transform">
+            <Download className="w-4 h-4" />
           </div>
           <div>
-            <h3 className="font-bold text-sm text-slate-900 group-hover:text-emerald-700 transition">Offline Library</h3>
-            <p className="text-xs text-slate-500 font-medium mt-0.5">{downloadedSet.size} tracks offline</p>
+            <h3 className="font-bold text-xs text-slate-900 group-hover:text-emerald-700 transition">Offline Library</h3>
+            <p className="text-[11px] text-slate-500 font-medium mt-0.5">{downloadedSet.size} offline</p>
           </div>
         </div>
 
         <div
           onClick={() => onTabChange('history')}
-          className="group p-5 rounded-2xl bg-white border border-slate-200/90 hover:border-slate-400 hover:bg-slate-50 cursor-pointer transition-all duration-200 space-y-2.5 shadow-xs"
+          className="group p-4 rounded-2xl bg-white border border-slate-200/90 hover:border-slate-400 hover:bg-slate-50 cursor-pointer transition-all duration-200 space-y-2 shadow-xs"
         >
-          <div className="w-10 h-10 rounded-xl bg-slate-100 text-slate-700 flex items-center justify-center group-hover:scale-110 transition-transform">
-            <Clock className="w-5 h-5" />
+          <div className="w-9 h-9 rounded-xl bg-slate-100 text-slate-700 flex items-center justify-center group-hover:scale-110 transition-transform">
+            <Clock className="w-4 h-4" />
           </div>
           <div>
-            <h3 className="font-bold text-sm text-slate-900 group-hover:text-slate-800 transition">History</h3>
-            <p className="text-xs text-slate-500 font-medium mt-0.5">{recentlyPlayed.length} recently played</p>
+            <h3 className="font-bold text-xs text-slate-900 group-hover:text-slate-800 transition">History</h3>
+            <p className="text-[11px] text-slate-500 font-medium mt-0.5">{recentlyPlayed.length} recent</p>
           </div>
         </div>
       </div>
 
-      {/* Continue Listening / Recently Played Section (Real Data Only) */}
+      {/* TRENDING SONGS SECTION */}
+      <div className="space-y-4">
+        <div className="flex items-center justify-between pb-2 border-b border-slate-200/90">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-xl bg-amber-500 text-slate-950 flex items-center justify-center font-bold shadow-xs">
+              <Flame className="w-5 h-5 fill-current" />
+            </div>
+            <div>
+              <h2 className="text-xl font-black text-slate-900 tracking-tight leading-none">
+                TRENDING NOW
+              </h2>
+              <p className="text-[10px] font-bold text-amber-600 uppercase tracking-wide mt-0.5">
+                Top Charting Hits
+              </p>
+            </div>
+          </div>
+
+          {trendingSongs.length > 0 && (
+            <button
+              onClick={() => onPlayAll(trendingSongs)}
+              className="px-4 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs shadow-xs transition flex items-center gap-1.5"
+            >
+              <Play className="w-3.5 h-3.5 fill-current text-amber-400" />
+              <span>Play All</span>
+            </button>
+          )}
+        </div>
+
+        {isLoadingTrending ? (
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+            {Array.from({ length: 10 }).map((_, idx) => (
+              <div key={idx} className="p-3.5 rounded-2xl bg-white border border-slate-200/80 animate-pulse space-y-3">
+                <div className="aspect-square bg-slate-100 rounded-xl" />
+                <div className="h-4 bg-slate-100 rounded-md w-3/4" />
+                <div className="h-3 bg-slate-100 rounded-md w-1/2" />
+              </div>
+            ))}
+          </div>
+        ) : trendingSongs.length > 0 ? (
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+            {trendingSongs.map((song) => (
+              <SongCard
+                key={song.id}
+                song={song}
+                isPlaying={isPlaying}
+                isCurrent={currentSong?.id === song.id}
+                isFavorite={favoritesSet.has(song.id)}
+                isDownloaded={downloadedSet.has(song.id)}
+                isDownloading={downloadingSet.has(song.id)}
+                onPlay={onPlaySong}
+                onToggleFavorite={onToggleFavorite}
+                onDownload={onDownloadSong}
+                onAddToQueue={onAddToQueue}
+              />
+            ))}
+          </div>
+        ) : (
+          <div className="p-8 text-center bg-white rounded-2xl border border-slate-200/90 text-slate-500 text-xs">
+            Unable to load trending songs. Try searching directly!
+          </div>
+        )}
+      </div>
+
+      {/* RECENTLY PLAYED SECTION */}
       {recentlyPlayed.length > 0 && (
         <div className="space-y-4 pt-2">
-          <div className="flex items-center justify-between pb-2 border-b border-slate-200">
+          <div className="flex items-center justify-between pb-2 border-b border-slate-200/90">
             <h3 className="text-lg font-black text-slate-900 flex items-center gap-2">
               <Clock className="w-5 h-5 text-amber-600" /> Continue Listening
             </h3>
@@ -162,28 +225,6 @@ export const HomeView: React.FC<HomeViewProps> = ({
           </div>
         </div>
       )}
-
-      {/* Clean Welcome State if No User Activity Yet */}
-      {!hasUserActivity && (
-        <div className="py-16 text-center space-y-4 bg-white rounded-3xl border border-slate-200/90 p-8 max-w-xl mx-auto shadow-xs">
-          <div className="w-16 h-16 rounded-3xl bg-amber-50 border border-amber-200 text-amber-600 flex items-center justify-center mx-auto">
-            <Compass className="w-8 h-8" />
-          </div>
-          <div className="space-y-1">
-            <h3 className="text-lg font-bold text-slate-900">Start Your Musical Journey</h3>
-            <p className="text-xs text-slate-500 font-medium leading-relaxed max-w-md mx-auto">
-              Use the search bar above to search for your favorite songs, artists, or genres. Your recently played tracks and favorites will appear here automatically.
-            </p>
-          </div>
-          <button
-            onClick={() => onTabChange('search')}
-            className="px-5 py-2.5 rounded-xl bg-slate-900 text-white text-xs font-bold shadow-xs hover:bg-slate-800 transition inline-flex items-center gap-2"
-          >
-            <Search className="w-4 h-4 text-amber-400" /> Start Searching
-          </button>
-        </div>
-      )}
     </div>
   );
 };
-

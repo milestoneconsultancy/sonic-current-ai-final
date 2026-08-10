@@ -33,7 +33,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           </div>
           <div className="flex flex-col">
             <h1 className="font-black text-xl tracking-tight text-slate-900 leading-none">
-              SONIC CURRENT
+              FREE MUSIC
             </h1>
             <p className="text-[10px] font-bold text-amber-600 tracking-wider uppercase mt-1">
               SURAJ KHANDAGALE
@@ -90,7 +90,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
       {/* Branding Footer */}
       <div className="p-4 border-t border-slate-100 bg-slate-50/50 text-center">
         <span className="text-[11px] font-bold text-slate-700 tracking-wide uppercase">
-          SONIC CURRENT
+          FREE MUSIC
         </span>
         <p className="text-[10px] font-bold text-amber-600 uppercase mt-0.5">
           SURAJ KHANDAGALE

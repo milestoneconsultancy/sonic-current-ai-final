@@ -20,7 +20,7 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
             <Music className="w-5 h-5 fill-current" />
           </div>
           <div className="flex flex-col">
-            <span className="font-black text-base text-slate-900 tracking-tight leading-none">SONIC CURRENT</span>
+            <span className="font-black text-base text-slate-900 tracking-tight leading-none">FREE MUSIC</span>
             <span className="text-[9px] font-bold text-amber-600 uppercase tracking-wide mt-0.5">SURAJ KHANDAGALE</span>
           </div>
         </div>

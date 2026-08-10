@@ -58,11 +58,33 @@ export const SearchView: React.FC<SearchViewProps> = ({
 
   const inputRef = useRef<HTMLInputElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const sentinelRef = useRef<HTMLDivElement>(null);
 
   // Sync typed query with incoming searchQuery if changed externally
   useEffect(() => {
     setTypedQuery(searchQuery);
   }, [searchQuery]);
+
+  // Infinite Scroll IntersectionObserver
+  useEffect(() => {
+    if (!hasMoreResults || isLoadingMore || !onLoadMore || isSearching) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting) {
+          onLoadMore();
+        }
+      },
+      { root: null, rootMargin: '300px', threshold: 0.1 }
+    );
+
+    const el = sentinelRef.current;
+    if (el) observer.observe(el);
+
+    return () => {
+      if (el) observer.unobserve(el);
+    };
+  }, [hasMoreResults, isLoadingMore, onLoadMore, isSearching, searchResults.length]);
 
   // Focus input automatically when Search view mounts / opens
   useEffect(() => {
@@ -377,28 +399,20 @@ export const SearchView: React.FC<SearchViewProps> = ({
             </div>
           )}
 
-          {/* Progressive Load More / Catalog Expansion */}
-          {hasMoreResults && onLoadMore && (
-            <div className="pt-4 flex flex-col items-center justify-center">
-              <button
-                onClick={onLoadMore}
-                disabled={isLoadingMore}
-                className="px-6 py-3 rounded-2xl bg-white hover:bg-slate-900 hover:text-white border border-slate-200/90 font-bold text-xs text-slate-800 shadow-sm transition-all duration-200 flex items-center gap-2 group disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {isLoadingMore ? (
-                  <>
-                    <div className="w-4 h-4 rounded-full border-2 border-amber-500 border-t-transparent animate-spin" />
-                    <span>Fetching catalog pages...</span>
-                  </>
-                ) : (
-                  <>
-                    <Sparkles className="w-4 h-4 text-amber-500 group-hover:text-amber-400" />
-                    <span>Load More Songs from Catalog</span>
-                  </>
-                )}
-              </button>
-            </div>
-          )}
+          {/* Infinite Scroll Sentinel & Progressive Loading Indicator */}
+          <div ref={sentinelRef} className="pt-6 pb-2 flex flex-col items-center justify-center text-center">
+            {isLoadingMore && (
+              <div className="flex items-center gap-2.5 py-3 px-5 rounded-2xl bg-white border border-slate-200/90 text-xs font-bold text-slate-700 shadow-xs">
+                <div className="w-4 h-4 rounded-full border-2 border-amber-500 border-t-transparent animate-spin" />
+                <span>Loading more songs…</span>
+              </div>
+            )}
+            {!hasMoreResults && searchResults.length > 0 && !isLoadingMore && (
+              <p className="text-xs font-semibold text-slate-400 py-2">
+                You've reached the end of available results.
+              </p>
+            )}
+          </div>
         </div>
       )}
 
@@ -410,7 +424,7 @@ export const SearchView: React.FC<SearchViewProps> = ({
           </div>
 
           <div className="space-y-2">
-            <h3 className="text-2xl font-black text-slate-900">SONIC CURRENT</h3>
+            <h3 className="text-2xl font-black text-slate-900">FREE MUSIC</h3>
             <p className="text-xs font-bold text-amber-600 uppercase tracking-widest mt-0.5">
               SURAJ KHANDAGALE
             </p>

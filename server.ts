@@ -664,17 +664,31 @@ function scoreAndRankSongs(rawSongs: any[], query: string, intent: SearchIntent)
 
   for (const item of scored) {
     const s = item.song;
-    const id = String(s.id);
-    const pairKey = `${(s.title || '').toLowerCase().trim()}_${(s.artist || '').toLowerCase().trim()}`;
+    const id = String(s.id || '').trim();
+    
+    // Canonical Title & Artist Normalization for deduplication
+    const normTitle = (s.title || s.song || '')
+      .toLowerCase()
+      .replace(/\s*[\(\[\{].*?[\)\]\}]/g, '')
+      .replace(/[^a-z0-9]/g, '')
+      .trim();
+    const primaryArtist = (s.artist || s.singers || '')
+      .toLowerCase()
+      .split(/,|&|\band\b|\bft\b|\bfeat\b/i)[0]
+      .replace(/[^a-z0-9]/g, '')
+      .trim();
+    const pairKey = `${normTitle}::${primaryArtist}`;
 
-    if (!seenIds.has(id) && !seenPairs.has(pairKey)) {
-      seenIds.add(id);
-      seenPairs.add(pairKey);
-      deduplicatedSongs.push({
-        ...s,
-        contextLabel: intent.contextLabel,
-      });
-    }
+    if (id && seenIds.has(id)) continue;
+    if (pairKey.length > 4 && seenPairs.has(pairKey)) continue;
+
+    if (id) seenIds.add(id);
+    if (pairKey.length > 4) seenPairs.add(pairKey);
+
+    deduplicatedSongs.push({
+      ...s,
+      contextLabel: intent.contextLabel,
+    });
   }
 
   return deduplicatedSongs;
@@ -770,7 +784,17 @@ app.get(['/result', '/result/', '/api/result', '/api/search', '/api/jiosaavn'], 
     }
   });
 
-  // 1b. Live Song Suggestions endpoint (returns array of real Song objects with artwork, title, artist, and audio URL)
+  // 1c. Trending Songs Endpoint
+  app.get(['/api/trending', '/trending'], async (req, res) => {
+    try {
+      const results = await searchSongsJioSaavn('latest trending hindi songs', 1);
+      res.setHeader('Cache-Control', 'public, max-age=600, stale-while-revalidate=120');
+      res.json(results);
+    } catch (error) {
+      console.error('[Trending API Error]:', error);
+      res.json([]);
+    }
+  });
   app.get(['/api/suggestions', '/api/autocomplete'], async (req, res) => {
     const query = (req.query.query as string) || '';
     if (!query || !query.trim()) {

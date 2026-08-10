@@ -31,6 +31,7 @@ import {
   clearAllDownloads,
   getStorageStats,
 } from './lib/db';
+import { deduplicateSongs, getCanonicalSongKey } from './lib/dedupe';
 
 import { Sidebar } from './components/Sidebar';
 import { BottomNav } from './components/BottomNav';
@@ -109,6 +110,25 @@ export default function App() {
   if (!audioRef.current) {
     audioRef.current = new Audio();
   }
+
+  // Persistent refs to avoid stale closures in event listeners
+  const queueRef = useRef(queue);
+  queueRef.current = queue;
+
+  const queueIndexRef = useRef(queueIndex);
+  queueIndexRef.current = queueIndex;
+
+  const repeatModeRef = useRef(repeatMode);
+  repeatModeRef.current = repeatMode;
+
+  const shuffleModeRef = useRef(shuffleMode);
+  shuffleModeRef.current = shuffleMode;
+
+  const currentSongRef = useRef(currentSong);
+  currentSongRef.current = currentSong;
+
+  const activeContextQueryRef = useRef(activeContextQuery);
+  activeContextQueryRef.current = activeContextQuery;
 
   // Restore saved player state on app launch
   useEffect(() => {
@@ -217,7 +237,7 @@ export default function App() {
         setSearchError(`No songs found for "${query.trim()}".`);
         setHasMoreResults(false);
       } else {
-        const songs: Song[] = data.map((item: any) => ({
+        const rawSongs: Song[] = data.map((item: any) => ({
           id: String(item.id || ''),
           title: String(item.title || item.song || 'Unknown Title'),
           artist: String(item.artist || item.singers || 'Unknown Artist'),
@@ -229,9 +249,11 @@ export default function App() {
           contextLabel: item.contextLabel ? String(item.contextLabel) : undefined,
         }));
 
-        setSearchResults(songs);
+        const { uniqueSongs } = deduplicateSongs(rawSongs);
+
+        setSearchResults(uniqueSongs);
         setSearchPage(1);
-        setHasMoreResults(songs.length >= 5);
+        setHasMoreResults(uniqueSongs.length >= 5);
 
         let detectedContext = '';
         const headerContext = response.headers.get('X-Context-Label');
@@ -242,8 +264,8 @@ export default function App() {
             detectedContext = headerContext;
           }
         }
-        if (!detectedContext && songs.length > 0 && songs[0].contextLabel) {
-          detectedContext = songs[0].contextLabel;
+        if (!detectedContext && uniqueSongs.length > 0 && uniqueSongs[0].contextLabel) {
+          detectedContext = uniqueSongs[0].contextLabel;
         }
 
         if (detectedContext) {
@@ -276,7 +298,7 @@ export default function App() {
       if (response.ok) {
         const data = await response.json();
         if (Array.isArray(data) && data.length > 0) {
-          const newSongs: Song[] = data.map((item: any) => ({
+          const rawSongs: Song[] = data.map((item: any) => ({
             id: String(item.id || ''),
             title: String(item.title || item.song || 'Unknown Title'),
             artist: String(item.artist || item.singers || 'Unknown Artist'),
@@ -288,17 +310,24 @@ export default function App() {
             contextLabel: item.contextLabel ? String(item.contextLabel) : undefined,
           }));
 
+          let addedCount = 0;
           setSearchResults((prev) => {
-            const existingIds = new Set(prev.map((s) => s.id));
-            const fresh = newSongs.filter((s) => !existingIds.has(s.id));
-            if (fresh.length === 0) {
+            const existingSeen = {
+              ids: new Set<string>(prev.map((s) => s.id).filter(Boolean)),
+              pairs: new Set<string>(
+                prev.map((s) => getCanonicalSongKey(s).pairKey).filter((p) => p.length > 4)
+              ),
+            };
+            const { uniqueSongs } = deduplicateSongs(rawSongs, existingSeen);
+            addedCount = uniqueSongs.length;
+            if (uniqueSongs.length === 0) {
               setHasMoreResults(false);
               return prev;
             }
-            return [...prev, ...fresh];
+            return [...prev, ...uniqueSongs];
           });
           setSearchPage(nextPage);
-          setHasMoreResults(newSongs.length >= 5);
+          setHasMoreResults(addedCount >= 5);
         } else {
           setHasMoreResults(false);
         }
@@ -516,87 +545,105 @@ export default function App() {
 
   // Smart Context Auto-Next Logic
   const handleAudioEnded = useCallback(async () => {
-    if (!audioRef.current || !currentSong) return;
+    const audio = audioRef.current;
+    const current = currentSongRef.current;
+    const curQueue = queueRef.current;
+    const curIndex = queueIndexRef.current;
+    const mode = repeatModeRef.current;
+    const isShuffle = shuffleModeRef.current;
+    const contextQuery = activeContextQueryRef.current;
+
+    if (!audio || !current) return;
 
     // 1. Repeat ONE
-    if (repeatMode === 'one') {
-      audioRef.current.currentTime = 0;
-      audioRef.current.play().catch(console.error);
+    if (mode === 'one') {
+      audio.currentTime = 0;
+      audio.play().catch(console.error);
       return;
     }
 
-    // 2. Queue navigation
-    let nextIndex = queueIndex + 1;
-
-    if (shuffleMode && queue.length > 1) {
-      let randIdx = Math.floor(Math.random() * queue.length);
-      while (randIdx === queueIndex) {
-        randIdx = Math.floor(Math.random() * queue.length);
+    // 2. Shuffle mode
+    if (isShuffle && curQueue.length > 1) {
+      let randIdx = Math.floor(Math.random() * curQueue.length);
+      while (randIdx === curIndex) {
+        randIdx = Math.floor(Math.random() * curQueue.length);
       }
-      nextIndex = randIdx;
+      setQueueIndex(randIdx);
+      handlePlaySong(curQueue[randIdx], randIdx, true);
+      return;
     }
 
-    if (nextIndex < queue.length) {
-      const nextSong = queue[nextIndex];
+    // 3. Queue navigation (next item in existing queue)
+    const nextIndex = curIndex + 1;
+    if (nextIndex < curQueue.length) {
       setQueueIndex(nextIndex);
-      handlePlaySong(nextSong, nextIndex, true);
+      handlePlaySong(curQueue[nextIndex], nextIndex, true);
       return;
     }
 
-    // 3. Repeat ALL
-    if (repeatMode === 'all' && queue.length > 0) {
+    // 4. Repeat ALL
+    if (mode === 'all' && curQueue.length > 0) {
       setQueueIndex(0);
-      handlePlaySong(queue[0], 0, true);
+      handlePlaySong(curQueue[0], 0, true);
       return;
     }
 
-    // 4. SMART CONTEXT AUTO-EXTEND QUEUE: Fetch related tracks using song context!
+    // 5. SMART CONTEXT AUTO-EXTEND QUEUE: Fetch related tracks using song context!
     if (!navigator.onLine) {
       setIsPlaying(false);
       return;
     }
 
     try {
-      const contextTerm = activeContextQuery || currentSong.artist || currentSong.title;
+      const contextTerm = contextQuery || current.artist || current.title;
       if (contextTerm) {
-        const nextPage = Math.floor(queue.length / 40) + 1;
-        const response = await fetch(
-          `/api/result?query=${encodeURIComponent(contextTerm.trim())}&page=${nextPage}`
-        );
-        if (response.ok) {
+        let page = Math.floor(curQueue.length / 10) + 1;
+        let freshFound: Song[] = [];
+        let attempts = 0;
+
+        while (freshFound.length === 0 && attempts < 5) {
+          attempts++;
+          page++;
+          const response = await fetch(
+            `/api/result?query=${encodeURIComponent(contextTerm.trim())}&page=${page}`
+          );
+          if (!response.ok) break;
+
           const data = await response.json();
-          if (Array.isArray(data) && data.length > 0) {
-            const relatedSongs: Song[] = data.map((item: any) => ({
-              id: String(item.id || ''),
-              title: String(item.title || item.song || 'Unknown Title'),
-              artist: String(item.artist || item.singers || 'Unknown Artist'),
-              album: String(item.album || ''),
-              duration: String(item.duration || '0'),
-              artwork: String(item.artwork || item.image || ''),
-              url: String(item.url || item.media_url || ''),
-              permaUrl: String(item.perma_url || ''),
-            }));
+          if (!Array.isArray(data) || data.length === 0) break;
 
-            // Filter out tracks already in current queue (by id or title+artist)
-            const freshSongs = relatedSongs.filter(
-              (s) =>
-                !queue.some(
-                  (q) =>
-                    q.id === s.id ||
-                    (q.title.toLowerCase().trim() === s.title.toLowerCase().trim() &&
-                      q.artist.toLowerCase().trim() === s.artist.toLowerCase().trim())
-                )
-            );
+          const fetchedSongs: Song[] = data.map((item: any) => ({
+            id: String(item.id || ''),
+            title: String(item.title || item.song || 'Unknown Title'),
+            artist: String(item.artist || item.singers || 'Unknown Artist'),
+            album: String(item.album || ''),
+            duration: String(item.duration || '0'),
+            artwork: String(item.artwork || item.image || ''),
+            url: String(item.url || item.media_url || ''),
+            permaUrl: String(item.perma_url || ''),
+          }));
 
-            if (freshSongs.length > 0) {
-              const newNext = freshSongs[0];
-              const updatedQueue = [...queue, ...freshSongs];
-              setQueue(updatedQueue);
-              setQueueIndex(queue.length);
-              handlePlaySong(newNext, queue.length, true);
-              return;
-            }
+          const existingSeen = {
+            ids: new Set<string>(curQueue.map((s) => s.id).filter(Boolean)),
+            pairs: new Set<string>(
+              curQueue.map((s) => getCanonicalSongKey(s).pairKey).filter((p) => p.length > 4)
+            ),
+          };
+
+          const { uniqueSongs } = deduplicateSongs(fetchedSongs, existingSeen);
+          if (uniqueSongs.length > 0) {
+            freshFound = uniqueSongs;
           }
+        }
+
+        if (freshFound.length > 0) {
+          const nextSong = freshFound[0];
+          const newQueue = [...curQueue, ...freshFound];
+          setQueue(newQueue);
+          const newIndex = curQueue.length;
+          setQueueIndex(newIndex);
+          handlePlaySong(nextSong, newIndex, true);
+          return;
         }
       }
     } catch (err) {
@@ -605,18 +652,29 @@ export default function App() {
 
     // Fallback: stop playback
     setIsPlaying(false);
-  }, [repeatMode, queue, queueIndex, shuffleMode, currentSong, activeContextQuery]);
+  }, []);
 
-  // Bind audio ended listener
+  // Bind audio ended and error listeners
   useEffect(() => {
     const audio = audioRef.current;
     if (!audio) return;
 
-    audio.onended = handleAudioEnded;
+    audio.onended = () => {
+      handleAudioEnded();
+    };
+
+    audio.onerror = () => {
+      console.warn('Audio playback error on current track, auto-advancing...');
+      setTimeout(() => {
+        handleNextTrack();
+      }, 500);
+    };
+
     return () => {
       audio.onended = null;
+      audio.onerror = null;
     };
-  }, [handleAudioEnded]);
+  }, [handleAudioEnded, handleNextTrack]);
 
   // Play / Pause Toggle
   const handlePlayPause = () => {
@@ -751,18 +809,37 @@ export default function App() {
 
   // Queue Operations
   const handleAddToQueue = (song: Song) => {
-    setQueue((prev) => [...prev, song]);
+    setQueue((prev) => {
+      const { id: targetId, pairKey: targetPair } = getCanonicalSongKey(song);
+      const exists = prev.some((q) => {
+        const { id, pairKey } = getCanonicalSongKey(q);
+        return (id && id === targetId) || (pairKey && pairKey === targetPair);
+      });
+      if (exists) return prev;
+      return [...prev, song];
+    });
   };
 
   const handleAddAllToQueue = (songs: Song[]) => {
-    setQueue((prev) => [...prev, ...songs]);
+    setQueue((prev) => {
+      const existingSeen = {
+        ids: new Set<string>(prev.map((s) => s.id).filter(Boolean)),
+        pairs: new Set<string>(
+          prev.map((s) => getCanonicalSongKey(s).pairKey).filter((p) => p.length > 4)
+        ),
+      };
+      const { uniqueSongs } = deduplicateSongs(songs, existingSeen);
+      return [...prev, ...uniqueSongs];
+    });
   };
 
   const handlePlayAll = (songs: Song[]) => {
     if (songs.length === 0) return;
-    setQueue(songs);
+    const { uniqueSongs } = deduplicateSongs(songs);
+    if (uniqueSongs.length === 0) return;
+    setQueue(uniqueSongs);
     setQueueIndex(0);
-    handlePlaySong(songs[0], 0);
+    handlePlaySong(uniqueSongs[0], 0, true);
   };
 
   const handleRemoveFromQueue = (index: number) => {
@@ -811,6 +888,7 @@ export default function App() {
               downloadedSet={downloadedSet}
               downloadingSet={downloadingSet}
               onPlaySong={handlePlaySong}
+              onPlayAll={handlePlayAll}
               onToggleFavorite={handleToggleFavoriteSong}
               onDownloadSong={handleDownloadSong}
               onAddToQueue={handleAddToQueue}
