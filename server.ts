@@ -416,12 +416,29 @@ async function searchSongsJioSaavn(query: string, page: number = 1) {
   }
 }
 
-async function startServer() {
-  const app = express();
-  const PORT = 3000;
+export const app = express();
+const PORT = 3000;
 
-  // 1. Result & Search API (compatible with cyberboysumanjay/JioSaavnAPI architecture)
-  app.get(['/result', '/result/', '/api/result', '/api/search', '/api/jiosaavn'], async (req, res) => {
+// CORS & Netlify Functions Path Rewriter
+app.use((req, res, next) => {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Range, Authorization');
+  res.setHeader('Access-Control-Expose-Headers', 'X-Context-Label');
+  if (req.method === 'OPTIONS') {
+    res.sendStatus(200);
+    return;
+  }
+
+  if (req.url.startsWith('/.netlify/functions/api')) {
+    req.url = req.url.replace('/.netlify/functions/api', '');
+    if (!req.url.startsWith('/')) req.url = '/' + req.url;
+  }
+  next();
+});
+
+// 1. Result & Search API (compatible with cyberboysumanjay/JioSaavnAPI architecture)
+app.get(['/result', '/result/', '/api/result', '/api/search', '/api/jiosaavn'], async (req, res) => {
     let query = (req.query.query as string) || '';
     const rawPath = (req.query.path as string) || '';
     const pageParam = parseInt((req.query.page as string) || '1', 10) || 1;
@@ -611,25 +628,37 @@ async function startServer() {
     }
   });
 
-  // Vite middleware for dev
-  if (process.env.NODE_ENV !== 'production') {
-    const vite = await createViteServer({
-      server: { middlewareMode: true },
-      appType: 'spa',
-    });
-    app.use(vite.middlewares);
-  } else {
-    const distPath = path.join(process.cwd(), 'dist');
-    app.use(express.static(distPath));
-    app.get('*', (req, res) => {
-      res.sendFile(path.join(distPath, 'index.html'));
+async function startServer() {
+  // Vite middleware for dev / static server for standalone production
+  if (!process.env.NETLIFY && !process.env.AWS_LAMBDA_FUNCTION_NAME && !process.env.LAMBDA_TASK_ROOT && !process.env.IS_NETLIFY_FUNCTION) {
+    if (process.env.NODE_ENV !== 'production') {
+      const vite = await createViteServer({
+        server: { middlewareMode: true },
+        appType: 'spa',
+      });
+      app.use(vite.middlewares);
+    } else {
+      const distPath = path.join(process.cwd(), 'dist');
+      app.use(express.static(distPath));
+      app.get('*', (req, res) => {
+        res.sendFile(path.join(distPath, 'index.html'));
+      });
+    }
+
+    app.listen(PORT, '0.0.0.0', () => {
+      console.log(`Server running on http://0.0.0.0:${PORT}`);
     });
   }
-
-  app.listen(PORT, '0.0.0.0', () => {
-    console.log(`Server running on http://0.0.0.0:${PORT}`);
-  });
 }
 
-startServer();
+const isMainScript =
+  Boolean(process.argv[1]) &&
+  (process.argv[1].endsWith('/server.ts') ||
+   process.argv[1].endsWith('/server.cjs') ||
+   process.argv[1].endsWith('\\server.ts') ||
+   process.argv[1].endsWith('\\server.cjs'));
+
+if (isMainScript && !process.env.NETLIFY && !process.env.AWS_LAMBDA_FUNCTION_NAME && !process.env.LAMBDA_TASK_ROOT && !process.env.IS_NETLIFY_FUNCTION) {
+  startServer();
+}
 
