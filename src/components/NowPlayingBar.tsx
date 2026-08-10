@@ -4,19 +4,10 @@ import {
   Pause,
   SkipBack,
   SkipForward,
-  Repeat,
-  Repeat1,
-  Shuffle,
-  Volume2,
-  VolumeX,
   Heart,
-  Download,
   ListMusic,
   Maximize2,
-  Check,
-  Loader2,
   Music2,
-  Sparkles,
 } from 'lucide-react';
 import { Song, RepeatMode } from '../types';
 import { AudioProgressBar } from './AudioProgressBar';
@@ -74,173 +65,127 @@ export const NowPlayingBar: React.FC<NowPlayingBarProps> = ({
 }) => {
   if (!currentSong) return null;
 
-  const formatTime = (seconds: number) => {
-    if (!seconds || isNaN(seconds)) return '0:00';
-    const mins = Math.floor(seconds / 60);
-    const secs = Math.floor(seconds % 60);
-    return `${mins}:${secs.toString().padStart(2, '0')}`;
-  };
-
   return (
-    <div className="fixed bottom-14 md:bottom-0 left-0 right-0 z-30 bg-white/95 border-t border-slate-200/90 backdrop-blur-2xl px-4 py-2.5 shadow-2xl transition-all">
-      <div className="max-w-7xl mx-auto flex items-center justify-between gap-4">
-        {/* Left: Track Info & Expand Trigger */}
-        <div className="flex items-center gap-3 min-w-0 w-1/4">
-          <div
-            onClick={onExpandPlayer}
-            className="relative w-12 h-12 rounded-xl bg-slate-100 overflow-hidden shrink-0 shadow-sm cursor-pointer group"
-          >
+    <div className="fixed z-40 bottom-[72px] sm:bottom-6 left-1/2 -translate-x-1/2 w-[calc(100%-1.25rem)] max-w-lg sm:max-w-xl md:max-w-2xl bg-slate-950/85 backdrop-blur-2xl border border-white/15 text-white shadow-2xl shadow-slate-950/50 rounded-full px-3 py-2 sm:px-4 sm:py-2.5 transition-all duration-300 ease-out select-none">
+      <div className="flex items-center justify-between gap-2 sm:gap-4">
+        {/* Left: Album Artwork & Song Details (Click to Expand) */}
+        <div
+          onClick={onExpandPlayer}
+          className="flex items-center gap-2.5 min-w-0 flex-1 sm:flex-initial cursor-pointer group"
+        >
+          <div className="relative w-10 h-10 sm:w-11 sm:h-11 rounded-full sm:rounded-2xl overflow-hidden shrink-0 shadow-md border border-white/10 bg-slate-900">
             {currentSong.artwork ? (
-              <img src={currentSong.artwork} alt={currentSong.title} className="w-full h-full object-cover" />
+              <img
+                key={currentSong.id}
+                src={currentSong.artwork}
+                alt={currentSong.title}
+                className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+              />
             ) : (
               <div className="w-full h-full flex items-center justify-center text-slate-400">
                 <Music2 className="w-5 h-5" />
               </div>
             )}
-            <div className="absolute inset-0 bg-slate-950/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition">
-              <Maximize2 className="w-4 h-4 text-white" />
+            <div className="absolute inset-0 bg-slate-950/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity duration-200">
+              <Maximize2 className="w-3.5 h-3.5 text-white" />
             </div>
           </div>
 
-          <div className="min-w-0 cursor-pointer" onClick={onExpandPlayer}>
-            <h4 className="font-bold text-sm text-slate-900 truncate">{currentSong.title}</h4>
-            <div className="flex items-center gap-2 truncate mt-0.5">
-              <p className="text-xs font-medium text-slate-500 truncate">{currentSong.artist}</p>
-              <span className="hidden sm:inline-flex items-center gap-1 text-[9px] font-bold text-amber-800 bg-amber-50 px-1.5 py-0.5 rounded-md border border-amber-200/80 shrink-0">
-                <Sparkles className="w-2.5 h-2.5 text-amber-600" />
-                {currentSong.album && currentSong.album !== currentSong.title
-                  ? `Context: ${currentSong.album}`
-                  : `Context: Artist • ${currentSong.artist}`}
-              </span>
-            </div>
+          <div className="min-w-0">
+            <h4 className="font-bold text-xs sm:text-sm text-white truncate max-w-[110px] xs:max-w-[140px] sm:max-w-[170px] md:max-w-[210px]">
+              {currentSong.title}
+            </h4>
+            <p className="text-[10px] sm:text-xs font-medium text-slate-300/80 truncate max-w-[110px] xs:max-w-[140px] sm:max-w-[170px] md:max-w-[210px]">
+              {currentSong.artist}
+            </p>
           </div>
-
-          <button
-            onClick={() => onToggleFavorite(currentSong)}
-            className={`hidden lg:block p-2 rounded-xl transition ${
-              isFavorite ? 'text-rose-500' : 'text-slate-400 hover:text-rose-500'
-            }`}
-          >
-            <Heart className={`w-4 h-4 ${isFavorite ? 'fill-current' : ''}`} />
-          </button>
         </div>
 
-        {/* Center: Playback Controls & Scrubbing Bar */}
-        <div className="flex-1 max-w-2xl flex flex-col items-center gap-1">
-          {/* Controls */}
-          <div className="flex items-center gap-4">
-            {/* Shuffle */}
-            <button
-              onClick={onToggleShuffle}
-              title={shuffleMode ? 'Shuffle ON' : 'Shuffle OFF'}
-              className={`p-1.5 rounded-lg transition ${
-                shuffleMode ? 'text-amber-600 bg-amber-100' : 'text-slate-400 hover:text-slate-700'
-              }`}
-            >
-              <Shuffle className="w-4 h-4" />
-            </button>
-
-            {/* Previous */}
-            <button
-              onClick={onPrevious}
-              className="p-1.5 text-slate-700 hover:text-slate-950 transition active:scale-90"
-            >
-              <SkipBack className="w-5 h-5" />
-            </button>
-
-            {/* Play/Pause */}
-            <button
-              onClick={onPlayPause}
-              className="w-10 h-10 rounded-full bg-slate-900 text-white flex items-center justify-center shadow-md hover:bg-slate-800 hover:scale-105 active:scale-95 transition"
-            >
-              {isPlaying ? <Pause className="w-5 h-5 fill-current" /> : <Play className="w-5 h-5 fill-current pl-0.5" />}
-            </button>
-
-            {/* Next */}
-            <button
-              onClick={onNext}
-              className="p-1.5 text-slate-700 hover:text-slate-950 transition active:scale-90"
-            >
-              <SkipForward className="w-5 h-5" />
-            </button>
-
-            {/* Repeat */}
-            <button
-              onClick={onToggleRepeat}
-              title={`Repeat Mode: ${repeatMode.toUpperCase()}`}
-              className={`p-1.5 rounded-lg transition relative ${
-                repeatMode !== 'off' ? 'text-amber-600 bg-amber-100' : 'text-slate-400 hover:text-slate-700'
-              }`}
-            >
-              {repeatMode === 'one' ? <Repeat1 className="w-4 h-4" /> : <Repeat className="w-4 h-4" />}
-            </button>
-          </div>
-
-          {/* Dynamic Audio Waveform Progress Bar */}
+        {/* Center: Floating Glass Audio Waveform */}
+        <div className="hidden xs:flex flex-1 max-w-[160px] sm:max-w-[240px] md:max-w-[300px] items-center px-1">
           <AudioProgressBar
             currentTime={currentTime}
             duration={duration}
             isPlaying={isPlaying}
             onSeek={onSeek}
-            barCount={36}
+            barCount={28}
+            variant="dark"
           />
         </div>
 
-        {/* Right: Actions, Volume & Queue Toggle */}
-        <div className="flex items-center justify-end gap-2.5 w-1/4">
-          {/* Download button */}
+        {/* Right: Glass Playback & Action Controls */}
+        <div className="flex items-center gap-1 sm:gap-1.5 shrink-0">
+          {/* Previous */}
           <button
-            onClick={() => onDownload(currentSong)}
-            disabled={isDownloading}
-            title={isDownloaded ? 'Downloaded' : 'Download song'}
-            className={`hidden sm:flex p-2 rounded-xl transition ${
-              isDownloaded ? 'text-emerald-600 bg-emerald-50' : isDownloading ? 'text-amber-500' : 'text-slate-400 hover:text-teal-700'
-            }`}
+            onClick={onPrevious}
+            aria-label="Previous track"
+            title="Previous track"
+            className="p-1.5 text-slate-300 hover:text-white transition active:scale-90 rounded-full hover:bg-white/10"
           >
-            {isDownloading ? (
-              <Loader2 className="w-4 h-4 animate-spin text-amber-500" />
-            ) : isDownloaded ? (
-              <Check className="w-4 h-4" />
+            <SkipBack className="w-4 h-4 fill-current" />
+          </button>
+
+          {/* Circular Glass Play/Pause Control */}
+          <button
+            onClick={onPlayPause}
+            aria-label={isPlaying ? 'Pause' : 'Play'}
+            title={isPlaying ? 'Pause' : 'Play'}
+            className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-amber-500 hover:bg-amber-400 text-slate-950 flex items-center justify-center shadow-lg shadow-amber-500/25 hover:scale-105 active:scale-95 transition-all duration-200 font-bold"
+          >
+            {isPlaying ? (
+              <Pause className="w-4 h-4 sm:w-5 sm:h-5 fill-current" />
             ) : (
-              <Download className="w-4 h-4" />
+              <Play className="w-4 h-4 sm:w-5 sm:h-5 fill-current pl-0.5" />
             )}
           </button>
 
-          {/* Queue Drawer Toggle */}
+          {/* Next */}
           <button
-            onClick={onToggleQueue}
-            title="View queue"
-            className="p-2 text-slate-500 hover:text-slate-900 rounded-xl hover:bg-slate-100 transition"
+            onClick={onNext}
+            aria-label="Next track"
+            title="Next track"
+            className="p-1.5 text-slate-300 hover:text-white transition active:scale-90 rounded-full hover:bg-white/10"
           >
-            <ListMusic className="w-5 h-5" />
+            <SkipForward className="w-4 h-4 fill-current" />
           </button>
 
-          {/* Volume Control */}
-          <div className="hidden lg:flex items-center gap-2 group">
-            <button onClick={onToggleMute} className="text-slate-400 hover:text-slate-800">
-              {isMuted || volume === 0 ? <VolumeX className="w-4 h-4 text-red-500" /> : <Volume2 className="w-4 h-4" />}
-            </button>
-            <input
-              type="range"
-              min="0"
-              max="1"
-              step="0.05"
-              value={isMuted ? 0 : volume}
-              onChange={(e) => onVolumeChange(parseFloat(e.target.value))}
-              className="w-20 h-1 accent-amber-500 bg-slate-200 rounded-lg cursor-pointer"
-            />
-          </div>
+          {/* Divider */}
+          <div className="h-4 w-[1px] bg-white/15 mx-0.5 hidden sm:block" />
 
-          {/* Expand Modal Trigger */}
+          {/* Like / Favorite */}
+          <button
+            onClick={() => onToggleFavorite(currentSong)}
+            aria-label={isFavorite ? 'Remove from Liked' : 'Like song'}
+            title={isFavorite ? 'Remove from Liked' : 'Like song'}
+            className={`hidden sm:flex p-1.5 rounded-full transition hover:bg-white/10 ${
+              isFavorite ? 'text-rose-400' : 'text-slate-400 hover:text-rose-400'
+            }`}
+          >
+            <Heart className={`w-4 h-4 ${isFavorite ? 'fill-current' : ''}`} />
+          </button>
+
+          {/* Queue Drawer */}
+          <button
+            onClick={onToggleQueue}
+            aria-label="View queue"
+            title="View queue"
+            className="p-1.5 text-slate-300 hover:text-white rounded-full hover:bg-white/10 transition"
+          >
+            <ListMusic className="w-4 h-4" />
+          </button>
+
+          {/* Expand Full Player */}
           <button
             onClick={onExpandPlayer}
+            aria-label="Full player view"
             title="Full player view"
-            className="p-2 text-slate-500 hover:text-slate-900 rounded-xl hover:bg-slate-100 transition"
+            className="p-1.5 text-slate-300 hover:text-white rounded-full hover:bg-white/10 transition"
           >
-            <Maximize2 className="w-4 h-4" />
+            <Maximize2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
           </button>
         </div>
       </div>
     </div>
   );
 };
+
