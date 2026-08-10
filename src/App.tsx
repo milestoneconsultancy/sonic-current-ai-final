@@ -111,6 +111,9 @@ export default function App() {
     audioRef.current = new Audio();
   }
 
+  // Ref to hold restored playback position across reloads
+  const restoredTimeRef = useRef<number>(0);
+
   // Persistent refs to avoid stale closures in event listeners
   const queueRef = useRef(queue);
   queueRef.current = queue;
@@ -127,8 +130,40 @@ export default function App() {
   const currentSongRef = useRef(currentSong);
   currentSongRef.current = currentSong;
 
+  const currentTimeRef = useRef(currentTime);
+  currentTimeRef.current = currentTime;
+
+  const isPlayingRef = useRef(isPlaying);
+  isPlayingRef.current = isPlaying;
+
   const activeContextQueryRef = useRef(activeContextQuery);
   activeContextQueryRef.current = activeContextQuery;
+
+  // Helper to resolve playable URL for a song
+  const getPlayableUrl = useCallback(async (song: Song): Promise<string> => {
+    try {
+      const downloaded = await getDownloadedSong(song.id);
+      if (downloaded && downloaded.audioBlob) {
+        return URL.createObjectURL(downloaded.audioBlob);
+      }
+    } catch (e) {
+      console.warn('Error checking downloaded song:', e);
+    }
+
+    if (!navigator.onLine) {
+      return '';
+    }
+    if (song.url.startsWith('http://') || song.url.startsWith('https://')) {
+      return song.url;
+    }
+    if (song.url.startsWith('blob:')) {
+      return song.url;
+    }
+    if (song.url) {
+      return `/api/audio?url=${encodeURIComponent(song.url)}`;
+    }
+    return '';
+  }, []);
 
   // Restore saved player state on app launch
   useEffect(() => {
@@ -139,23 +174,63 @@ export default function App() {
         setQueue(saved.queue);
         setQueueIndex(saved.queueIndex || 0);
       }
-      if (saved.currentTime > 0) {
-        setCurrentTime(saved.currentTime);
-      }
+      if (saved.repeatMode) setRepeatMode(saved.repeatMode);
+      if (typeof saved.shuffleMode === 'boolean') setShuffleMode(saved.shuffleMode);
+
+      const restoredPos = saved.currentTime || 0;
+      setCurrentTime(restoredPos);
+      restoredTimeRef.current = restoredPos;
+
+      // Pre-assign audio.src without auto-playing so position can be restored
+      getPlayableUrl(saved.currentSong).then((url) => {
+        if (url && audioRef.current) {
+          audioRef.current.src = url;
+          audioRef.current.load();
+        }
+      }).catch(console.error);
+    }
+  }, [getPlayableUrl]);
+
+  // Helper to save current active player state
+  const saveStateNow = useCallback(() => {
+    if (currentSongRef.current) {
+      const pos = audioRef.current ? audioRef.current.currentTime : currentTimeRef.current;
+      saveActivePlayerState({
+        currentSong: currentSongRef.current,
+        currentTime: pos,
+        queue: queueRef.current,
+        queueIndex: queueIndexRef.current,
+        repeatMode: repeatModeRef.current,
+        shuffleMode: shuffleModeRef.current,
+      });
     }
   }, []);
 
-  // Save player state periodically on updates
+  // Save player state periodically (every 1.5s while playing) & on page lifecycle events
   useEffect(() => {
-    saveActivePlayerState({
-      currentSong,
-      currentTime,
-      queue,
-      queueIndex,
-      repeatMode,
-      shuffleMode,
-    });
-  }, [currentSong, currentTime, queue, queueIndex, repeatMode, shuffleMode]);
+    const interval = setInterval(() => {
+      if (isPlayingRef.current) {
+        saveStateNow();
+      }
+    }, 1500);
+
+    const handleSaveEvent = () => {
+      saveStateNow();
+    };
+
+    window.addEventListener('pause', handleSaveEvent);
+    window.addEventListener('visibilitychange', handleSaveEvent);
+    window.addEventListener('pagehide', handleSaveEvent);
+    window.addEventListener('beforeunload', handleSaveEvent);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('pause', handleSaveEvent);
+      window.removeEventListener('visibilitychange', handleSaveEvent);
+      window.removeEventListener('pagehide', handleSaveEvent);
+      window.removeEventListener('beforeunload', handleSaveEvent);
+    };
+  }, [saveStateNow]);
 
   // Derived sets for O(1) checks
   const favoritesSet = new Set(favorites.map((f) => f.id));
@@ -360,6 +435,12 @@ export default function App() {
     const handleLoadedMetadata = () => {
       if (audio.duration && !isNaN(audio.duration)) {
         setDuration(audio.duration);
+      }
+      if (restoredTimeRef.current > 0) {
+        if (restoredTimeRef.current < (audio.duration || Infinity)) {
+          audio.currentTime = restoredTimeRef.current;
+        }
+        restoredTimeRef.current = 0;
       }
     };
 
@@ -677,8 +758,9 @@ export default function App() {
   }, [handleAudioEnded, handleNextTrack]);
 
   // Play / Pause Toggle
-  const handlePlayPause = () => {
-    if (!audioRef.current) return;
+  const handlePlayPause = async () => {
+    const audio = audioRef.current;
+    if (!audio) return;
     if (!currentSong) {
       if (searchResults.length > 0) {
         handlePlaySong(searchResults[0], 0);
@@ -687,10 +769,21 @@ export default function App() {
     }
 
     if (isPlaying) {
-      audioRef.current.pause();
+      audio.pause();
       setIsPlaying(false);
+      saveStateNow();
     } else {
-      audioRef.current.play().then(() => setIsPlaying(true)).catch(console.error);
+      if (!audio.src || audio.src === '' || audio.src === window.location.href) {
+        const url = await getPlayableUrl(currentSong);
+        if (url) {
+          audio.src = url;
+          audio.load();
+        }
+      }
+      if (currentTime > 0 && Math.abs(audio.currentTime - currentTime) > 0.5) {
+        audio.currentTime = currentTime;
+      }
+      audio.play().then(() => setIsPlaying(true)).catch(console.error);
     }
   };
 
@@ -743,7 +836,16 @@ export default function App() {
 
   // Download Management (IndexedDB)
   const handleDownloadSong = async (song: Song) => {
-    if (downloadedSet.has(song.id) || downloadingSet.has(song.id)) return;
+    const isAlreadyDownloaded = downloadedSongs.some((d) => {
+      if (d.id === song.id) return true;
+      const t1 = d.title.trim().toLowerCase();
+      const t2 = song.title.trim().toLowerCase();
+      const a1 = d.artist.trim().toLowerCase();
+      const a2 = song.artist.trim().toLowerCase();
+      return t1 === t2 && a1 === a2 && t1.length > 2;
+    });
+
+    if (isAlreadyDownloaded || downloadingSet.has(song.id)) return;
 
     setDownloadingSet((prev) => new Set(prev).add(song.id));
 
