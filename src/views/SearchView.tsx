@@ -16,6 +16,9 @@ interface SearchViewProps {
   downloadedSet: Set<string>;
   downloadingSet: Set<string>;
   activeContextQuery?: string;
+  hasMoreResults?: boolean;
+  isLoadingMore?: boolean;
+  onLoadMore?: () => void;
   onPlaySong: (song: Song, index?: number) => void;
   onPlayAll: (songs: Song[]) => void;
   onToggleFavorite: (song: Song) => void;
@@ -36,6 +39,9 @@ export const SearchView: React.FC<SearchViewProps> = ({
   downloadedSet,
   downloadingSet,
   activeContextQuery,
+  hasMoreResults = false,
+  isLoadingMore = false,
+  onLoadMore,
   onPlaySong,
   onPlayAll,
   onToggleFavorite,
@@ -44,7 +50,7 @@ export const SearchView: React.FC<SearchViewProps> = ({
   onAddAllToQueue,
 }) => {
   const [typedQuery, setTypedQuery] = useState(searchQuery);
-  const [viewMode, setViewMode] = useState<'list' | 'grid'>('list');
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [liveSuggestions, setLiveSuggestions] = useState<Song[]>([]);
   const [isLoadingSuggestions, setIsLoadingSuggestions] = useState(false);
   const [selectedIndex, setSelectedIndex] = useState<number>(-1);
@@ -332,7 +338,7 @@ export const SearchView: React.FC<SearchViewProps> = ({
 
       {/* Results View */}
       {!isSearching && searchResults.length > 0 && (
-        <div>
+        <div className="space-y-6">
           {viewMode === 'list' ? (
             <div className="space-y-2">
               {searchResults.map((song, idx) => (
@@ -368,6 +374,29 @@ export const SearchView: React.FC<SearchViewProps> = ({
                   onAddToQueue={onAddToQueue}
                 />
               ))}
+            </div>
+          )}
+
+          {/* Progressive Load More / Catalog Expansion */}
+          {hasMoreResults && onLoadMore && (
+            <div className="pt-4 flex flex-col items-center justify-center">
+              <button
+                onClick={onLoadMore}
+                disabled={isLoadingMore}
+                className="px-6 py-3 rounded-2xl bg-white hover:bg-slate-900 hover:text-white border border-slate-200/90 font-bold text-xs text-slate-800 shadow-sm transition-all duration-200 flex items-center gap-2 group disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isLoadingMore ? (
+                  <>
+                    <div className="w-4 h-4 rounded-full border-2 border-amber-500 border-t-transparent animate-spin" />
+                    <span>Fetching catalog pages...</span>
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="w-4 h-4 text-amber-500 group-hover:text-amber-400" />
+                    <span>Load More Songs from Catalog</span>
+                  </>
+                )}
+              </button>
             </div>
           )}
         </div>

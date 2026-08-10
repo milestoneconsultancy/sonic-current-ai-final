@@ -145,17 +145,32 @@ function getDeterministicSearchIntent(query: string): SearchIntent {
   // Moods & Themes
   if (lower.includes('sad')) {
     entities.mood = 'Sad';
+    if (detectedIntent === 'general') {
+      detectedIntent = 'mood';
+      contextLabel = 'Mood • Sad Hits';
+    }
     searchQueriesSet.add('sad songs');
     searchQueriesSet.add('sad hindi songs');
-  } else if (lower.includes('romantic') || lower.includes('love')) {
+  }
+  if (lower.includes('romantic') || lower.includes('love')) {
     entities.mood = 'Romantic';
+    if (detectedIntent === 'general') {
+      detectedIntent = 'mood';
+      contextLabel = 'Mood • Romantic Love';
+    }
     searchQueriesSet.add('romantic songs');
     searchQueriesSet.add('love songs');
-  } else if (lower.includes('party') || lower.includes('dance') || lower.includes('dj')) {
+  }
+  if (lower.includes('party') || lower.includes('dance') || lower.includes('dj')) {
     entities.mood = 'Party';
+    if (detectedIntent === 'general') {
+      detectedIntent = 'mood';
+      contextLabel = 'Mood • Party & Dance';
+    }
     searchQueriesSet.add('party songs');
     searchQueriesSet.add('dance songs');
-  } else if (lower.includes('friendship') || lower.includes('dosti') || lower.includes('yaari') || lower.includes('yaar')) {
+  }
+  if (lower.includes('friendship') || lower.includes('dosti') || lower.includes('yaari') || lower.includes('yaar')) {
     entities.theme = 'Friendship';
     if (detectedIntent === 'general') {
       detectedIntent = 'theme';
@@ -179,14 +194,60 @@ function getDeterministicSearchIntent(query: string): SearchIntent {
       contextLabel = 'Activity • Gym & Workout';
     }
     searchQueriesSet.add('gym workout songs');
+  } else if (lower.includes('maa') || lower.includes('mother') || lower.includes('mom') || lower.includes('mummy')) {
+    entities.theme = 'Maa';
+    if (detectedIntent === 'general') {
+      detectedIntent = 'theme';
+      contextLabel = 'Theme • Songs for Maa';
+    }
+    searchQueriesSet.add('maa songs');
+    searchQueriesSet.add('meri maa');
+    searchQueriesSet.add('tu kitni achhi hai');
+  } else if (lower.includes('breakup') || lower.includes('dil tootne') || lower.includes('heartbreak')) {
+    entities.mood = 'Breakup';
+    if (detectedIntent === 'general') {
+      detectedIntent = 'mood';
+      contextLabel = 'Mood • Breakup Songs';
+    }
+    searchQueriesSet.add('breakup songs');
+    searchQueriesSet.add('sad breakup songs');
+  } else if (lower.includes('wedding') || lower.includes('shaadi') || lower.includes('sangeet')) {
+    entities.theme = 'Wedding';
+    if (detectedIntent === 'general') {
+      detectedIntent = 'occasion';
+      contextLabel = 'Occasion • Wedding & Shaadi';
+    }
+    searchQueriesSet.add('wedding songs');
+    searchQueriesSet.add('shaadi songs');
+  }
+
+  // Combination Label Formatting
+  if (entities.artist && (entities.mood || entities.movie || entities.era || entities.language)) {
+    detectedIntent = 'combination';
+    const sub = entities.mood || entities.movie || entities.era || entities.language;
+    contextLabel = `${entities.artist} • ${sub}`;
+  } else if (entities.era && entities.mood) {
+    detectedIntent = 'combination';
+    contextLabel = `Era ${entities.era} • ${entities.mood}`;
   }
 
   // Lyrics / Line Search Detection
-  if (lower.includes('tum hi ho') || lower.includes('mere paas') || lower.includes('jisme') || lower.includes('line') || lower.includes('wo gana')) {
+  if (
+    lower.includes('tum hi ho') ||
+    lower.includes('mere paas') ||
+    lower.includes('jisme') ||
+    lower.includes('line') ||
+    lower.includes('wo gana') ||
+    lower.includes('that song')
+  ) {
     detectedIntent = 'lyrics';
     entities.lyrics = norm;
     contextLabel = 'Lyrics • Matching Line Search';
-    const cleanLyricPhrase = lower.replace(/wo gana jisme|that song jisme|line jisme/gi, '').trim();
+    const cleanLyricPhrase = lower
+      .replace(/wo gana jisme|that song jisme|line jisme|wo line jisme|song jisme/gi, '')
+      .replace(/ke bare me hai|ke baare me hai|ke bare me/gi, '')
+      .trim();
+
     if (cleanLyricPhrase) {
       searchQueriesSet.add(cleanLyricPhrase);
       const parts = cleanLyricPhrase.split(/\s+/);

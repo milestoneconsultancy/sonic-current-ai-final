@@ -55,6 +55,9 @@ export default function App() {
   const [isSearching, setIsSearching] = useState(false);
   const [searchError, setSearchError] = useState<string | null>(null);
   const [activeContextQuery, setActiveContextQuery] = useState<string>('');
+  const [searchPage, setSearchPage] = useState<number>(1);
+  const [hasMoreResults, setHasMoreResults] = useState<boolean>(true);
+  const [isLoadingMore, setIsLoadingMore] = useState<boolean>(false);
 
   // Player State
   const [currentSong, setCurrentSong] = useState<Song | null>(null);
@@ -160,6 +163,8 @@ export default function App() {
       setSearchResults([]);
       setSearchError(null);
       setIsSearching(false);
+      setSearchPage(1);
+      setHasMoreResults(true);
       return;
     }
 
@@ -185,6 +190,8 @@ export default function App() {
         }));
 
       setSearchResults(matched);
+      setSearchPage(1);
+      setHasMoreResults(false);
       if (matched.length === 0) {
         setSearchError(`You are offline. No downloaded songs match "${query.trim()}".`);
       } else {
@@ -195,9 +202,11 @@ export default function App() {
 
     setIsSearching(true);
     setSearchError(null);
+    setSearchPage(1);
+    setHasMoreResults(true);
 
     try {
-      const response = await fetch(`/api/result?query=${encodeURIComponent(query.trim())}`);
+      const response = await fetch(`/api/result?query=${encodeURIComponent(query.trim())}&page=1`);
       if (!response.ok) {
         throw new Error(`API error: ${response.status}`);
       }
@@ -206,6 +215,7 @@ export default function App() {
       if (!Array.isArray(data) || data.length === 0) {
         setSearchResults([]);
         setSearchError(`No songs found for "${query.trim()}".`);
+        setHasMoreResults(false);
       } else {
         const songs: Song[] = data.map((item: any) => ({
           id: String(item.id || ''),
@@ -220,6 +230,8 @@ export default function App() {
         }));
 
         setSearchResults(songs);
+        setSearchPage(1);
+        setHasMoreResults(songs.length >= 5);
 
         let detectedContext = '';
         const headerContext = response.headers.get('X-Context-Label');
@@ -246,8 +258,57 @@ export default function App() {
       }
     } catch (err) {
       setSearchError(err instanceof Error ? err.message : 'Search failed.');
+      setHasMoreResults(false);
     } finally {
       setIsSearching(false);
+    }
+  };
+
+  const handleLoadMoreResults = async () => {
+    if (isLoadingMore || !hasMoreResults || !searchQuery.trim() || !navigator.onLine) return;
+    setIsLoadingMore(true);
+    const nextPage = searchPage + 1;
+
+    try {
+      const response = await fetch(
+        `/api/result?query=${encodeURIComponent(searchQuery.trim())}&page=${nextPage}`
+      );
+      if (response.ok) {
+        const data = await response.json();
+        if (Array.isArray(data) && data.length > 0) {
+          const newSongs: Song[] = data.map((item: any) => ({
+            id: String(item.id || ''),
+            title: String(item.title || item.song || 'Unknown Title'),
+            artist: String(item.artist || item.singers || 'Unknown Artist'),
+            album: String(item.album || ''),
+            duration: String(item.duration || '0'),
+            artwork: String(item.artwork || item.image || ''),
+            url: String(item.url || item.media_url || ''),
+            permaUrl: String(item.perma_url || ''),
+            contextLabel: item.contextLabel ? String(item.contextLabel) : undefined,
+          }));
+
+          setSearchResults((prev) => {
+            const existingIds = new Set(prev.map((s) => s.id));
+            const fresh = newSongs.filter((s) => !existingIds.has(s.id));
+            if (fresh.length === 0) {
+              setHasMoreResults(false);
+              return prev;
+            }
+            return [...prev, ...fresh];
+          });
+          setSearchPage(nextPage);
+          setHasMoreResults(newSongs.length >= 5);
+        } else {
+          setHasMoreResults(false);
+        }
+      } else {
+        setHasMoreResults(false);
+      }
+    } catch (err) {
+      console.error('Failed to load more results:', err);
+    } finally {
+      setIsLoadingMore(false);
     }
   };
 
@@ -769,6 +830,9 @@ export default function App() {
               downloadedSet={downloadedSet}
               downloadingSet={downloadingSet}
               activeContextQuery={activeContextQuery}
+              hasMoreResults={hasMoreResults}
+              isLoadingMore={isLoadingMore}
+              onLoadMore={handleLoadMoreResults}
               onPlaySong={handlePlaySong}
               onPlayAll={handlePlayAll}
               onToggleFavorite={handleToggleFavoriteSong}
