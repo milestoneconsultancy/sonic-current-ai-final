@@ -32,9 +32,10 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
   // Live song suggestions debounced fetch
   useEffect(() => {
     const trimmed = searchQuery.trim();
-    if (trimmed.length < 2) {
+    if (trimmed.length < 2 || !navigator.onLine) {
       setLiveSuggestions([]);
       setSelectedIndex(-1);
+      setIsLoadingSuggestions(false);
       return;
     }
 

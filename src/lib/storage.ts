@@ -188,3 +188,34 @@ export function savePlayerSettings(settings: Partial<PlayerSettings>): void {
     console.error('Error saving player settings', err);
   }
 }
+
+// --- ACTIVE PLAYER STATE PERSISTENCE ---
+const ACTIVE_PLAYER_STATE_KEY = 'sonic_current_active_player_state';
+
+export interface ActivePlayerState {
+  currentSong: Song | null;
+  currentTime: number;
+  queue: Song[];
+  queueIndex: number;
+  repeatMode: RepeatMode;
+  shuffleMode: boolean;
+}
+
+export function saveActivePlayerState(state: ActivePlayerState): void {
+  try {
+    localStorage.setItem(ACTIVE_PLAYER_STATE_KEY, JSON.stringify(state));
+  } catch (err) {
+    console.error('Error saving active player state', err);
+  }
+}
+
+export function getActivePlayerState(): ActivePlayerState | null {
+  try {
+    const raw = localStorage.getItem(ACTIVE_PLAYER_STATE_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch (err) {
+    console.error('Error reading active player state', err);
+    return null;
+  }
+}
+

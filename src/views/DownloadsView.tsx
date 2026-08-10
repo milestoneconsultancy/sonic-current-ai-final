@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Download, HardDrive, Trash2, Play, Plus, Check, ShieldAlert, Music2 } from 'lucide-react';
 import { Song, DownloadedSong } from '../types';
 import { SongListItem } from '../components/SongListItem';
@@ -38,16 +38,18 @@ export const DownloadsView: React.FC<DownloadsViewProps> = ({
 }) => {
   const [showConfirmClear, setShowConfirmClear] = useState(false);
 
-  const songList: Song[] = downloadedSongs.map((d) => ({
-    id: d.id,
-    title: d.title,
-    artist: d.artist,
-    album: d.album,
-    duration: d.duration,
-    artwork: d.artwork,
-    url: URL.createObjectURL(d.audioBlob), // Create object URL for offline playback!
-    permaUrl: '',
-  }));
+  const songList: Song[] = useMemo(() => {
+    return downloadedSongs.map((d) => ({
+      id: d.id,
+      title: d.title,
+      artist: d.artist,
+      album: d.album,
+      duration: d.duration,
+      artwork: d.artwork,
+      url: '', // handlePlaySong looks up IndexedDB directly by song ID
+      permaUrl: '',
+    }));
+  }, [downloadedSongs]);
 
   return (
     <div className="space-y-6 pb-24">

@@ -20,6 +20,8 @@ import {
   clearRecentlyPlayed,
   getPlayerSettings,
   savePlayerSettings,
+  getActivePlayerState,
+  saveActivePlayerState,
 } from './lib/storage';
 import {
   saveDownloadedSong,
@@ -83,8 +85,54 @@ export default function App() {
   const [downloadingSet, setDownloadingSet] = useState<Set<string>>(new Set());
   const [storageStats, setStorageStats] = useState({ count: 0, totalBytes: 0, formattedSize: '0 B' });
 
-  // Ref
+  // Network Offline State
+  const [isOffline, setIsOffline] = useState(!navigator.onLine);
+
+  useEffect(() => {
+    const handleOnline = () => setIsOffline(false);
+    const handleOffline = () => setIsOffline(true);
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
+
+  // Ref - Persistent HTML5 Audio instance across re-renders/visibility changes
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  if (!audioRef.current) {
+    audioRef.current = new Audio();
+  }
+
+  // Restore saved player state on app launch
+  useEffect(() => {
+    const saved = getActivePlayerState();
+    if (saved && saved.currentSong) {
+      setCurrentSong(saved.currentSong);
+      if (saved.queue && saved.queue.length > 0) {
+        setQueue(saved.queue);
+        setQueueIndex(saved.queueIndex || 0);
+      }
+      if (saved.currentTime > 0) {
+        setCurrentTime(saved.currentTime);
+      }
+    }
+  }, []);
+
+  // Save player state periodically on updates
+  useEffect(() => {
+    saveActivePlayerState({
+      currentSong,
+      currentTime,
+      queue,
+      queueIndex,
+      repeatMode,
+      shuffleMode,
+    });
+  }, [currentSong, currentTime, queue, queueIndex, repeatMode, shuffleMode]);
 
   // Derived sets for O(1) checks
   const favoritesSet = new Set(favorites.map((f) => f.id));
@@ -112,6 +160,36 @@ export default function App() {
       setSearchResults([]);
       setSearchError(null);
       setIsSearching(false);
+      return;
+    }
+
+    if (!navigator.onLine) {
+      setIsSearching(false);
+      const q = query.trim().toLowerCase();
+      const matched: Song[] = downloadedSongs
+        .filter(
+          (d) =>
+            d.title.toLowerCase().includes(q) ||
+            d.artist.toLowerCase().includes(q) ||
+            d.album.toLowerCase().includes(q)
+        )
+        .map((d) => ({
+          id: d.id,
+          title: d.title,
+          artist: d.artist,
+          album: d.album,
+          duration: d.duration,
+          artwork: d.artwork,
+          url: '',
+          permaUrl: '',
+        }));
+
+      setSearchResults(matched);
+      if (matched.length === 0) {
+        setSearchError(`You are offline. No downloaded songs match "${query.trim()}".`);
+      } else {
+        setSearchError(null);
+      }
       return;
     }
 
@@ -185,8 +263,8 @@ export default function App() {
 
   // Audio Element Setup & Event Listeners
   useEffect(() => {
-    const audio = new Audio();
-    audioRef.current = audio;
+    const audio = audioRef.current;
+    if (!audio) return;
 
     const handleTimeUpdate = () => setCurrentTime(audio.currentTime);
     const handleLoadedMetadata = () => {
@@ -199,7 +277,6 @@ export default function App() {
     audio.addEventListener('loadedmetadata', handleLoadedMetadata);
 
     return () => {
-      audio.pause();
       audio.removeEventListener('timeupdate', handleTimeUpdate);
       audio.removeEventListener('loadedmetadata', handleLoadedMetadata);
     };
@@ -220,9 +297,13 @@ export default function App() {
 
       if (downloaded) {
         playableUrl = URL.createObjectURL(downloaded.audioBlob);
+      } else if (!navigator.onLine) {
+        setSearchError('You are currently offline. Connect to the internet or play downloaded songs.');
+        setIsPlaying(false);
+        return;
       } else if (song.url.startsWith('http://') || song.url.startsWith('https://')) {
         playableUrl = song.url;
-      } else if (!song.url.startsWith('blob:')) {
+      } else if (!song.url.startsWith('blob:') && song.url) {
         playableUrl = `/api/audio?url=${encodeURIComponent(song.url)}`;
       }
 
@@ -251,9 +332,11 @@ export default function App() {
       }
 
       const audio = audioRef.current;
-      audio.src = playableUrl;
-      audio.volume = isMuted ? 0 : volume;
-      audio.load();
+      if (audio.src !== playableUrl && !audio.src.endsWith(playableUrl)) {
+        audio.src = playableUrl;
+        audio.volume = isMuted ? 0 : volume;
+        audio.load();
+      }
 
       await audio.play();
     } catch (err) {
@@ -294,7 +377,7 @@ export default function App() {
       ],
     });
 
-    const setHandler = (action: MediaSessionAction, handler: (() => void) | null) => {
+    const setHandler = (action: MediaSessionAction, handler: ((details?: any) => void) | null) => {
       try {
         navigator.mediaSession.setActionHandler(action, handler);
       } catch (e) {
@@ -407,6 +490,11 @@ export default function App() {
     }
 
     // 4. SMART CONTEXT AUTO-EXTEND QUEUE: Fetch related tracks using song context!
+    if (!navigator.onLine) {
+      setIsPlaying(false);
+      return;
+    }
+
     try {
       const contextTerm = activeContextQuery || currentSong.artist || currentSong.title;
       if (contextTerm) {
@@ -548,7 +636,28 @@ export default function App() {
       }
 
       const audioBlob = await response.blob();
-      await saveDownloadedSong(song, audioBlob);
+
+      // Convert artwork to data URL for offline display if remote
+      let offlineArtwork = song.artwork;
+      if (song.artwork && (song.artwork.startsWith('http://') || song.artwork.startsWith('https://'))) {
+        try {
+          const artRes = await fetch(song.artwork);
+          if (artRes.ok) {
+            const artBlob = await artRes.blob();
+            offlineArtwork = await new Promise<string>((resolve) => {
+              const reader = new FileReader();
+              reader.onloadend = () => resolve(reader.result as string);
+              reader.onerror = () => resolve(song.artwork);
+              reader.readAsDataURL(artBlob);
+            });
+          }
+        } catch (e) {
+          console.warn('Artwork offline caching fallback:', e);
+        }
+      }
+
+      const songToSave = { ...song, artwork: offlineArtwork };
+      await saveDownloadedSong(songToSave, audioBlob);
       await refreshDownloads();
     } catch (err) {
       console.error('Download error:', err);
@@ -619,6 +728,12 @@ export default function App() {
 
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col min-w-0 pb-32">
+        {isOffline && (
+          <div className="bg-amber-500/10 border-b border-amber-500/20 px-4 py-2 text-center text-xs font-semibold text-amber-800 flex items-center justify-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
+            <span>Offline Mode Active — Downloaded songs & offline queue ready</span>
+          </div>
+        )}
         <HeaderBar
           currentTab={currentTab}
           searchQuery={searchQuery}
