@@ -565,7 +565,7 @@ app.get(['/result', '/result/', '/api/result', '/api/search', '/api/jiosaavn'], 
     }
   });
 
-  // 2. Audio Stream Proxy Endpoint with HTTP Range support
+  // 2. Audio Stream Proxy Endpoint with HTTP Range support & 1MB chunk capping for serverless safety
   app.get('/api/audio', async (req, res) => {
     const rawUrl = req.query.url as string;
     if (!rawUrl) {
@@ -583,14 +583,34 @@ app.get(['/result', '/result/', '/api/result', '/api/search', '/api/jiosaavn'], 
         return;
       }
 
+      const rangeHeader = req.headers.range as string | undefined;
+
+      // If no Range header requested, redirect directly to CDN URL for instant full streaming
+      if (!rangeHeader) {
+        res.redirect(302, targetUrl);
+        return;
+      }
+
+      // Parse range request
+      let start = 0;
+      let end = 1048575; // 1MB max chunk size
+
+      const rangeMatch = rangeHeader.match(/bytes=(\d+)-(\d+)?/);
+      if (rangeMatch) {
+        start = parseInt(rangeMatch[1], 10) || 0;
+        if (rangeMatch[2]) {
+          const reqEnd = parseInt(rangeMatch[2], 10);
+          end = Math.min(reqEnd, start + 1048575);
+        } else {
+          end = start + 1048575;
+        }
+      }
+
       const headers: Record<string, string> = {
         'User-Agent':
           'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Range': `bytes=${start}-${end}`,
       };
-
-      if (req.headers.range) {
-        headers['Range'] = req.headers.range as string;
-      }
 
       const response = await fetch(targetUrl, {
         headers,
@@ -603,16 +623,15 @@ app.get(['/result', '/result/', '/api/result', '/api/search', '/api/jiosaavn'], 
         return;
       }
 
-      const contentType = response.headers.get('content-type') || 'audio/mpeg';
+      const contentType = response.headers.get('content-type') || 'audio/mp4';
       const contentLength = response.headers.get('content-length');
       const contentRange = response.headers.get('content-range');
-      const acceptRanges = response.headers.get('accept-ranges');
 
-      res.status(response.status);
+      res.status(206);
       res.setHeader('Content-Type', contentType);
       if (contentLength) res.setHeader('Content-Length', contentLength);
       if (contentRange) res.setHeader('Content-Range', contentRange);
-      if (acceptRanges) res.setHeader('Accept-Ranges', acceptRanges);
+      res.setHeader('Accept-Ranges', 'bytes');
       res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
 
       const arrayBuffer = await response.arrayBuffer();

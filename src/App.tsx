@@ -220,6 +220,8 @@ export default function App() {
 
       if (downloaded) {
         playableUrl = URL.createObjectURL(downloaded.audioBlob);
+      } else if (song.url.startsWith('http://') || song.url.startsWith('https://')) {
+        playableUrl = song.url;
       } else if (!song.url.startsWith('blob:')) {
         playableUrl = `/api/audio?url=${encodeURIComponent(song.url)}`;
       }
