@@ -273,10 +273,7 @@ export const AccountView: React.FC<AccountViewProps> = ({
           SONIC CURRENT
         </div>
         <p className="text-[11px] font-extrabold text-amber-700 tracking-wider uppercase">
-          MADE BY ONE CLICK SOLUTION
-        </p>
-        <p className="text-xs font-bold text-slate-500 pt-1">
-          Designed & Developed by <span className="text-slate-900 font-extrabold">Suraj Khandagle</span>
+          SURAJ KHANDAGALE
         </p>
       </div>
     </div>

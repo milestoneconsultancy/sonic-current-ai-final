@@ -35,8 +35,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
             <h1 className="font-black text-xl tracking-tight text-slate-900 leading-none">
               SONIC CURRENT
             </h1>
-            <p className="text-[11px] font-bold text-amber-600 tracking-wider uppercase mt-1">
-              MADE BY ONE CLICK SOLUTION
+            <p className="text-[10px] font-bold text-amber-600 tracking-wider uppercase mt-1">
+              SURAJ KHANDAGALE
             </p>
           </div>
         </div>
@@ -93,7 +93,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           SONIC CURRENT
         </span>
         <p className="text-[10px] font-bold text-amber-600 uppercase mt-0.5">
-          MADE BY ONE CLICK SOLUTION
+          SURAJ KHANDAGALE
         </p>
       </div>
     </aside>

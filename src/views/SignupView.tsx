@@ -78,7 +78,7 @@ export const SignupView: React.FC<SignupViewProps> = ({
           <div className="space-y-0.5">
             <h1 className="text-2xl font-black text-slate-950 tracking-tight">SONIC CURRENT</h1>
             <p className="text-[11px] font-extrabold text-amber-700 tracking-wider uppercase">
-              MADE BY ONE CLICK SOLUTION
+              SURAJ KHANDAGALE
             </p>
           </div>
           <p className="text-xs font-medium text-slate-500 pt-1">

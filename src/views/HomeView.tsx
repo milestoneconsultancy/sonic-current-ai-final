@@ -48,7 +48,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
               SONIC CURRENT
             </h1>
             <p className="text-xs sm:text-sm font-black text-amber-600 uppercase tracking-widest pt-1">
-              MADE BY ONE CLICK SOLUTION
+              SURAJ KHANDAGALE
             </p>
           </div>
 

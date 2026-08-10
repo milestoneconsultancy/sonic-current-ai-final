@@ -504,7 +504,7 @@ app.get(['/result', '/result/', '/api/result', '/api/search', '/api/jiosaavn'], 
     }
   });
 
-  // 1b. Autocomplete suggestions endpoint (returns array of clean song titles only)
+  // 1b. Live Song Suggestions endpoint (returns array of real Song objects with artwork, title, artist, and audio URL)
   app.get(['/api/suggestions', '/api/autocomplete'], async (req, res) => {
     const query = (req.query.query as string) || '';
     if (!query || !query.trim()) {
@@ -513,52 +513,9 @@ app.get(['/result', '/result/', '/api/result', '/api/search', '/api/jiosaavn'], 
     }
 
     try {
-      const searchUrl =
-        'https://www.jiosaavn.com/api.php?__call=autocomplete.get&_format=json&_marker=0&cc=in&includeMetaTags=1&query=' +
-        encodeURIComponent(query.trim());
-
-      const response = await fetch(searchUrl, {
-        headers: {
-          'User-Agent':
-            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-        },
-      });
-
-      const rawText = await response.text();
-      const cleanText = rawText.replace(/\\\(From "([^"]+)"\\\)/g, "(From '$1')");
-      let json: any = {};
-      try {
-        json = JSON.parse(cleanText);
-      } catch (e) {
-        json = {};
-      }
-
-      const songTitlesSet = new Set<string>();
-
-      // Extract from songs
-      const songsList = json?.songs?.data || [];
-      for (const s of songsList) {
-        const rawTitle = s.title || s.song;
-        if (rawTitle) {
-          const cleanTitle = cleanString(rawTitle);
-          if (cleanTitle) songTitlesSet.add(cleanTitle);
-        }
-      }
-
-      // Extract from topquery if song
-      const topList = json?.topquery?.data || [];
-      for (const t of topList) {
-        if (t.type === 'song' || t.type === 'music') {
-          const rawTitle = t.title || t.song;
-          if (rawTitle) {
-            const cleanTitle = cleanString(rawTitle);
-            if (cleanTitle) songTitlesSet.add(cleanTitle);
-          }
-        }
-      }
-
+      const results = await searchSongsJioSaavn(query.trim(), 1);
       res.setHeader('Cache-Control', 'public, max-age=300, stale-while-revalidate=60');
-      res.json(Array.from(songTitlesSet).slice(0, 8));
+      res.json(results.slice(0, 8));
     } catch (error) {
       console.error('[Suggestions API Error]:', error);
       res.json([]);

@@ -736,15 +736,6 @@ export default function App() {
         )}
         <HeaderBar
           currentTab={currentTab}
-          searchQuery={searchQuery}
-          onSearchChange={setSearchQuery}
-          searchHistory={searchHistory}
-          onSelectHistoryQuery={(query) => {
-            setSearchQuery(query);
-            setCurrentTab('search');
-          }}
-          onClearHistoryItem={(id) => setSearchHistory(removeSearchHistoryItem(id))}
-          isSearching={isSearching}
           onTabChange={setCurrentTab}
         />
 
