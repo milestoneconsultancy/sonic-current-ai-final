@@ -1,0 +1,111 @@
+{
+  "entities": {
+    "User": {
+      "title": "User Profile",
+      "description": "User account profile document",
+      "type": "object",
+      "properties": {
+        "email": { "type": "string" },
+        "displayName": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" },
+        "lastLoginAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["email", "createdAt"]
+    },
+    "Favorite": {
+      "title": "Favorite Song",
+      "type": "object",
+      "properties": {
+        "songId": { "type": "string" },
+        "title": { "type": "string" },
+        "artist": { "type": "string" },
+        "album": { "type": "string" },
+        "artwork": { "type": "string" },
+        "duration": { "type": "string" },
+        "url": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["songId", "title", "artist"]
+    },
+    "SearchHistory": {
+      "title": "Search History",
+      "type": "object",
+      "properties": {
+        "query": { "type": "string" },
+        "searchCount": { "type": "number" },
+        "lastSearchedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["query"]
+    },
+    "PlayHistory": {
+      "title": "Play History",
+      "type": "object",
+      "properties": {
+        "songId": { "type": "string" },
+        "title": { "type": "string" },
+        "artist": { "type": "string" },
+        "album": { "type": "string" },
+        "artwork": { "type": "string" },
+        "duration": { "type": "string" },
+        "playedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["songId", "title"]
+    },
+    "Playlist": {
+      "title": "User Playlist",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "description": { "type": "string" },
+        "trackCount": { "type": "number" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["name"]
+    },
+    "PlaylistTrack": {
+      "title": "Playlist Track",
+      "type": "object",
+      "properties": {
+        "songId": { "type": "string" },
+        "title": { "type": "string" },
+        "artist": { "type": "string" },
+        "album": { "type": "string" },
+        "artwork": { "type": "string" },
+        "duration": { "type": "string" },
+        "position": { "type": "number" },
+        "addedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["songId", "title"]
+    },
+    "UserPreference": {
+      "title": "User Preference",
+      "type": "object",
+      "properties": {
+        "preferredQuality": { "type": "string" },
+        "autoplayEnabled": { "type": "boolean" },
+        "repeatMode": { "type": "string" },
+        "shuffleEnabled": { "type": "boolean" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      }
+    },
+    "DownloadMetadata": {
+      "title": "Download Metadata",
+      "type": "object",
+      "properties": {
+        "songId": { "type": "string" },
+        "title": { "type": "string" },
+        "artist": { "type": "string" },
+        "album": { "type": "string" },
+        "artwork": { "type": "string" },
+        "duration": { "type": "string" },
+        "downloadedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["songId", "title"]
+    }
+  },
+  "firestore": {
+    "rules": "firestore.rules"
+  }
+}
