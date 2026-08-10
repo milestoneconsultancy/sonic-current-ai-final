@@ -155,7 +155,7 @@ export const FullPlayerModal: React.FC<FullPlayerModalProps> = ({
 
           {/* Dancing Baby Companion */}
           <div className="absolute -bottom-6 -right-2 sm:-right-4 md:-right-6 z-20">
-            <DancingBaby isPlaying={isPlaying} />
+            <DancingBaby isPlaying={isPlaying} song={currentSong} />
           </div>
         </div>
 

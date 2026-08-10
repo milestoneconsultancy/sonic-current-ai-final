@@ -8,6 +8,7 @@ export interface Song {
   url: string; // media url
   permaUrl: string;
   contextLabel?: string;
+  bpm?: number;
 }
 
 export interface DownloadedSong {
