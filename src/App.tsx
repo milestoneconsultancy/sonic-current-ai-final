@@ -1043,6 +1043,17 @@ export default function App() {
     if (isCapacitor) {
       try {
         const { Filesystem, Directory } = await import('@capacitor/filesystem');
+
+        // Check & request storage permissions if needed
+        try {
+          const perm = await Filesystem.checkPermissions();
+          if (perm.publicStorage !== 'granted') {
+            await Filesystem.requestPermissions();
+          }
+        } catch (permErr) {
+          console.warn('[DEVICE] Permission check warning:', permErr);
+        }
+
         const reader = new FileReader();
         const base64Data = await new Promise<string>((resolve, reject) => {
           reader.onloadend = () => {
@@ -1054,27 +1065,51 @@ export default function App() {
           reader.readAsDataURL(audioBlob);
         });
 
-        await Filesystem.writeFile({
-          path: fileName,
-          data: base64Data,
-          directory: Directory.Documents,
-        });
+        // Try writing to public Download directory first, fallback to Documents
+        let targetDirectory = Directory.ExternalStorage;
+        let targetPath = `Download/${fileName}`;
+        let writeSuccess = false;
 
-        // Verify native file exists and size > 0
-        const stat = await Filesystem.stat({
-          path: fileName,
-          directory: Directory.Documents,
-        });
-
-        if (!stat || stat.size === 0) {
-          throw new Error('Capacitor native file write failed: Output file size is 0.');
+        try {
+          await Filesystem.writeFile({
+            path: targetPath,
+            data: base64Data,
+            directory: targetDirectory,
+            recursive: true,
+          });
+          writeSuccess = true;
+        } catch (e1) {
+          console.warn('[DEVICE] Failed writing to ExternalStorage/Download, trying Documents:', e1);
+          targetDirectory = Directory.Documents;
+          targetPath = fileName;
+          await Filesystem.writeFile({
+            path: targetPath,
+            data: base64Data,
+            directory: targetDirectory,
+            recursive: true,
+          });
+          writeSuccess = true;
         }
 
-        console.log(`[DEVICE] Capacitor native file write verified (${stat.size} bytes)`);
-        onProgress(100);
-        return true;
+        if (writeSuccess) {
+          // Verify native file exists and size on disk > 0
+          const stat = await Filesystem.stat({
+            path: targetPath,
+            directory: targetDirectory,
+          });
+
+          if (!stat || stat.size === 0) {
+            throw new Error('Capacitor native file write failed: Output file size on disk is 0.');
+          }
+
+          console.log(
+            `[DEVICE] Capacitor native file write verified at ${targetPath} (${stat.size} bytes on disk)`
+          );
+          onProgress(100);
+          return true;
+        }
       } catch (capErr: any) {
-        console.warn('[DEVICE] Capacitor native save fallback:', capErr?.message || capErr);
+        console.warn('[DEVICE] Capacitor native save error, falling back to browser download:', capErr?.message || capErr);
       }
     }
 
