@@ -836,13 +836,13 @@ app.get(['/result', '/result/', '/api/result', '/api/search', '/api/jiosaavn'], 
   app.get(['/api/trending', '/trending'], async (req, res) => {
     try {
       const languagesParam = (req.query.languages as string || '').trim();
-      let trendQuery = 'latest trending indian songs';
+      let trendQuery = 'latest trending indian hits';
       let allowedLangs: string[] = [];
 
       if (languagesParam && !languagesParam.toLowerCase().includes('all indian languages')) {
         allowedLangs = languagesParam.split(',').map(l => l.trim().toLowerCase()).filter(Boolean);
         if (allowedLangs.length > 0) {
-          trendQuery = `latest trending ${allowedLangs.join(' ')} songs`;
+          trendQuery = `latest ${allowedLangs.join(' ')} hits`;
         }
       }
 
@@ -856,8 +856,20 @@ app.get(['/result', '/result/', '/api/result', '/api/search', '/api/jiosaavn'], 
         });
       }
 
-      res.setHeader('Cache-Control', 'public, max-age=600, stale-while-revalidate=120');
-      res.json(finalResults);
+      // Ensure distinct artwork for each song in Global Trending
+      const uniqueArtworkList: any[] = [];
+      const seenArtworks = new Set<string>();
+
+      for (const song of finalResults) {
+        const art = song.artwork || song.image;
+        if (!art || !seenArtworks.has(art)) {
+          if (art) seenArtworks.add(art);
+          uniqueArtworkList.push(song);
+        }
+      }
+
+      res.setHeader('Cache-Control', 'public, max-age=300, stale-while-revalidate=60');
+      res.json(uniqueArtworkList.length >= 5 ? uniqueArtworkList : finalResults);
     } catch (error) {
       console.error('[Trending API Error]:', error);
       res.json([]);
@@ -895,6 +907,53 @@ app.get(['/result', '/result/', '/api/result', '/api/search', '/api/jiosaavn'], 
     }
   });
 
+  // Helper to fetch upstream audio with automatic bitrate fallback (320kbps -> 160kbps -> 96kbps -> original)
+  async function fetchUpstreamAudio(
+    targetUrl: string,
+    extraHeaders: Record<string, string> = {}
+  ): Promise<{ response: Response; finalUrl: string } | null> {
+    const urlsToTry: string[] = [targetUrl];
+
+    if (targetUrl.includes('_320.mp4')) {
+      urlsToTry.push(targetUrl.replace('_320.mp4', '_160.mp4'));
+      urlsToTry.push(targetUrl.replace('_320.mp4', '_96.mp4'));
+      urlsToTry.push(targetUrl.replace('_320.mp4', '_128.mp4'));
+    } else if (targetUrl.includes('_160.mp4')) {
+      urlsToTry.push(targetUrl.replace('_160.mp4', '_96.mp4'));
+    }
+
+    const defaultHeaders = {
+      'User-Agent':
+        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+      'Referer': 'https://www.jiosaavn.com/',
+      'Accept': '*/*',
+      ...extraHeaders,
+    };
+
+    for (const url of urlsToTry) {
+      try {
+        console.log(`[AUDIO Proxy] Attempting upstream fetch: ${url}`);
+        const response = await fetch(url, {
+          headers: defaultHeaders,
+          redirect: 'follow',
+        });
+
+        if (response.ok || response.status === 206) {
+          const contentType = (response.headers.get('content-type') || '').toLowerCase();
+          if (!contentType.includes('text/html') && !contentType.includes('application/json')) {
+            console.log(`[AUDIO Proxy] Upstream fetch succeeded (${response.status}): ${url}`);
+            return { response, finalUrl: url };
+          }
+        }
+        console.warn(`[AUDIO Proxy] Upstream URL status ${response.status} or invalid content-type (${response.headers.get('content-type')}) for: ${url}`);
+      } catch (err: any) {
+        console.error(`[AUDIO Proxy] Upstream fetch exception for ${url}:`, err?.message || err);
+      }
+    }
+
+    return null;
+  }
+
   // 2. Audio Stream Proxy Endpoint with HTTP Range support & direct download proxy
   app.get('/api/audio', async (req, res) => {
     const rawUrl = req.query.url as string;
@@ -923,62 +982,26 @@ app.get(['/result', '/result/', '/api/result', '/api/search', '/api/jiosaavn'], 
 
       const rangeHeader = req.headers.range as string | undefined;
 
-      // Full download proxy OR non-ranged stream (prevents CORS issues on browser fetch)
+      // Non-ranged full download OR non-ranged stream
       if (isDownload || !rangeHeader) {
-        console.log(`[AUDIO Proxy] Fetching full audio for: ${targetUrl}`);
-        const response = await fetch(targetUrl, {
-          headers: {
-            'User-Agent':
-              'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-          },
-          redirect: 'follow',
-        });
-
-        if (!response.ok) {
-          console.error(`[AUDIO Proxy] Upstream status ${response.status} for ${targetUrl}`);
-          res.status(response.status >= 400 && response.status < 600 ? response.status : 502).json({
-            error: `Audio source unavailable (status ${response.status})`,
-          });
+        const upstream = await fetchUpstreamAudio(targetUrl);
+        if (!upstream) {
+          console.error(`[AUDIO Proxy] All upstream URLs failed for: ${targetUrl}`);
+          res.status(502).json({ error: 'Audio source unavailable' });
           return;
         }
 
-        const rawContentType = response.headers.get('content-type') || '';
-        console.log(`[AUDIO Proxy] Upstream content-type: ${rawContentType}`);
-
-        if (
-          rawContentType.toLowerCase().includes('text/html') ||
-          rawContentType.toLowerCase().includes('application/json')
-        ) {
-          console.error(`[AUDIO Proxy] Upstream returned non-audio contentType: ${rawContentType}`);
-          res.status(502).json({ error: 'Upstream audio source returned invalid content format' });
-          return;
-        }
-
-        const arrayBuffer = await response.arrayBuffer();
-        const buffer = Buffer.from(arrayBuffer);
-
-        if (buffer.length === 0) {
-          console.error('[AUDIO Proxy] Upstream returned 0 bytes');
-          res.status(502).json({ error: 'Audio source returned empty response' });
-          return;
-        }
-
-        if (buffer.length < 1000) {
-          console.error(`[AUDIO Proxy] Payload too small: ${buffer.length} bytes`);
-          res.status(502).json({ error: 'Audio payload too small or truncated' });
-          return;
-        }
-
-        console.log(`[AUDIO Proxy] Successfully retrieved ${buffer.length} bytes for ${filenameParam}`);
-
+        const { response: upRes } = upstream;
+        const rawContentType = upRes.headers.get('content-type') || '';
         const contentType =
-          rawContentType && rawContentType.startsWith('audio/')
+          rawContentType && (rawContentType.startsWith('audio/') || rawContentType.startsWith('video/'))
             ? rawContentType
             : 'audio/mpeg';
 
         res.status(200);
         res.setHeader('Content-Type', contentType);
-        res.setHeader('Content-Length', buffer.length.toString());
+        const contentLength = upRes.headers.get('content-length');
+        if (contentLength) res.setHeader('Content-Length', contentLength);
         res.setHeader('Access-Control-Allow-Origin', '*');
         res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
         if (isDownload) {
@@ -988,49 +1011,43 @@ app.get(['/result', '/result/', '/api/result', '/api/search', '/api/jiosaavn'], 
           );
         }
 
-        res.send(buffer);
-        return;
-      }
-
-      // Parse range request
-      let start = 0;
-      let end = 1048575; // 1MB max chunk size
-
-      const rangeMatch = rangeHeader.match(/bytes=(\d+)-(\d+)?/);
-      if (rangeMatch) {
-        start = parseInt(rangeMatch[1], 10) || 0;
-        if (rangeMatch[2]) {
-          const reqEnd = parseInt(rangeMatch[2], 10);
-          end = Math.min(reqEnd, start + 1048575);
+        if (upRes.body) {
+          const reader = upRes.body.getReader();
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            res.write(Buffer.from(value));
+          }
+          res.end();
         } else {
-          end = start + 1048575;
+          const arrayBuffer = await upRes.arrayBuffer();
+          res.send(Buffer.from(arrayBuffer));
         }
-      }
-
-      const headers: Record<string, string> = {
-        'User-Agent':
-          'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-        'Range': `bytes=${start}-${end}`,
-      };
-
-      const response = await fetch(targetUrl, {
-        headers,
-        redirect: 'follow',
-      });
-
-      if (!response.ok && response.status !== 206) {
-        console.warn(`[AUDIO Proxy] Upstream status ${response.status} for ${targetUrl}`);
-        res.status(response.status >= 400 && response.status < 600 ? response.status : 502).json({
-          error: 'Audio source unavailable',
-        });
         return;
       }
 
-      const contentType = response.headers.get('content-type') || 'audio/mpeg';
-      const contentLength = response.headers.get('content-length');
-      const contentRange = response.headers.get('content-range');
+      // Range request handling
+      const extraHeaders: Record<string, string> = { Range: rangeHeader };
+      const upstream = await fetchUpstreamAudio(targetUrl, extraHeaders);
 
-      res.status(206);
+      if (!upstream) {
+        console.error(`[AUDIO Proxy] Upstream range request failed for: ${targetUrl}`);
+        res.status(502).json({ error: 'Audio source unavailable' });
+        return;
+      }
+
+      const { response: upRes } = upstream;
+      const status = upRes.status === 206 ? 206 : 200;
+      const rawContentType = upRes.headers.get('content-type') || '';
+      const contentType =
+        rawContentType && (rawContentType.startsWith('audio/') || rawContentType.startsWith('video/'))
+          ? rawContentType
+          : 'audio/mpeg';
+
+      const contentLength = upRes.headers.get('content-length');
+      const contentRange = upRes.headers.get('content-range');
+
+      res.status(status);
       res.setHeader('Content-Type', contentType);
       if (contentLength) res.setHeader('Content-Length', contentLength);
       if (contentRange) res.setHeader('Content-Range', contentRange);
@@ -1038,9 +1055,18 @@ app.get(['/result', '/result/', '/api/result', '/api/search', '/api/jiosaavn'], 
       res.setHeader('Access-Control-Allow-Origin', '*');
       res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
 
-      const arrayBuffer = await response.arrayBuffer();
-      const buffer = Buffer.from(arrayBuffer);
-      res.send(buffer);
+      if (upRes.body) {
+        const reader = upRes.body.getReader();
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          res.write(Buffer.from(value));
+        }
+        res.end();
+      } else {
+        const arrayBuffer = await upRes.arrayBuffer();
+        res.send(Buffer.from(arrayBuffer));
+      }
       return;
     } catch (error: any) {
       console.error('[AUDIO Proxy Error]:', error?.message || error);

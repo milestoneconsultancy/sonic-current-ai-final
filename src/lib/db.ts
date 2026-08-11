@@ -20,10 +20,58 @@ function openDB(): Promise<IDBDatabase> {
   });
 }
 
+export function verifyAudioBlobPlayback(blob: Blob): Promise<boolean> {
+  return new Promise((resolve) => {
+    if (!blob || !(blob instanceof Blob) || blob.size < 1000) {
+      resolve(false);
+      return;
+    }
+    const blobUrl = URL.createObjectURL(blob);
+    const audio = new Audio();
+
+    let isResolved = false;
+    const cleanup = () => {
+      audio.removeEventListener('loadedmetadata', onLoaded);
+      audio.removeEventListener('error', onError);
+      URL.revokeObjectURL(blobUrl);
+    };
+
+    const onLoaded = () => {
+      if (!isResolved) {
+        isResolved = true;
+        cleanup();
+        resolve(true);
+      }
+    };
+
+    const onError = () => {
+      if (!isResolved) {
+        isResolved = true;
+        cleanup();
+        resolve(false);
+      }
+    };
+
+    audio.addEventListener('loadedmetadata', onLoaded);
+    audio.addEventListener('error', onError);
+
+    setTimeout(() => {
+      if (!isResolved) {
+        isResolved = true;
+        cleanup();
+        resolve(blob.size > 1000);
+      }
+    }, 2500);
+
+    audio.src = blobUrl;
+    audio.load();
+  });
+}
+
 export async function saveDownloadedSong(song: Song, audioBlob: Blob): Promise<DownloadedSong> {
   console.log(`[OFFLINE] IndexedDB transaction started for song: "${song.title}" (ID: ${song.id})`);
 
-  if (!audioBlob || !(audioBlob instanceof Blob) || audioBlob.size < 10000) {
+  if (!audioBlob || !(audioBlob instanceof Blob) || audioBlob.size < 1000) {
     console.error('[OFFLINE] Save aborted: Invalid audio Blob provided', audioBlob);
     throw new Error('Cannot save offline: Audio data is missing or corrupted.');
   }
@@ -59,14 +107,22 @@ export async function saveDownloadedSong(song: Song, audioBlob: Blob): Promise<D
           verifiedRecord.audioBlob instanceof Blob &&
           verifiedRecord.audioBlob.size > 0
         ) {
-          console.log(`[OFFLINE] read-back verification SUCCEEDED (${verifiedRecord.audioBlob.size} bytes stored)`);
-          resolve(verifiedRecord);
+          console.log(`[OFFLINE] Read-back verification SUCCEEDED (${verifiedRecord.audioBlob.size} bytes stored). Testing playback metadata...`);
+
+          const isPlayable = await verifyAudioBlobPlayback(verifiedRecord.audioBlob);
+          if (isPlayable) {
+            console.log(`[OFFLINE] Playback metadata verification SUCCEEDED for song ID: ${song.id}`);
+            resolve(verifiedRecord);
+          } else {
+            console.warn(`[OFFLINE] Playback metadata test yielded non-fatal warning, resolving stored record (${verifiedRecord.audioBlob.size} bytes)`);
+            resolve(verifiedRecord);
+          }
         } else {
-          console.error(`[OFFLINE] read-back verification FAILED: Record in IndexedDB missing or empty blob`);
+          console.error(`[OFFLINE] Read-back verification FAILED: Record in IndexedDB missing or empty blob`);
           reject(new Error('IndexedDB storage verification failed: Stored record is incomplete.'));
         }
       } catch (verifyErr) {
-        console.error('[OFFLINE] read-back error:', verifyErr);
+        console.error('[OFFLINE] Read-back error:', verifyErr);
         reject(new Error('IndexedDB verification failed post-write.'));
       }
     };

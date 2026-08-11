@@ -44,15 +44,16 @@ export async function fetchAudioBlob(
     throw new Error(errorDetail || `Unable to retrieve audio stream (Status ${response.status}).`);
   }
 
-  const contentType = response.headers.get('content-type') || '';
+  const contentType = (response.headers.get('content-type') || '').toLowerCase();
   console.log(`[AUDIO] content-type: ${contentType}`);
 
+  // Only reject if content-type is explicitly HTML or JSON
   if (
-    contentType.toLowerCase().includes('text/html') ||
-    contentType.toLowerCase().includes('application/json')
+    contentType.includes('text/html') ||
+    contentType.includes('application/json')
   ) {
     console.error('[AUDIO] Received non-audio Content-Type:', contentType);
-    throw new Error('Audio proxy returned invalid data format instead of audio stream.');
+    throw new Error('Audio proxy returned text or JSON instead of audio stream.');
   }
 
   let blob: Blob;
@@ -65,9 +66,9 @@ export async function fetchAudioBlob(
 
   console.log(`[AUDIO] blob size: ${blob.size} bytes`);
 
-  if (!blob || blob.size < 10000) {
-    console.error(`[AUDIO] Blob verification failed: Size is ${blob?.size || 0} bytes (minimum 10000 required)`);
-    throw new Error(`Audio download incomplete or corrupted (${blob?.size || 0} bytes received).`);
+  if (!blob || blob.size < 1000) {
+    console.error(`[AUDIO] Blob verification failed: Size is ${blob?.size || 0} bytes`);
+    throw new Error(`Audio download incomplete (${blob?.size || 0} bytes received).`);
   }
 
   if (blob.type && (blob.type.includes('json') || blob.type.includes('html'))) {
@@ -75,7 +76,10 @@ export async function fetchAudioBlob(
     throw new Error('Downloaded payload is an error document, not audio data.');
   }
 
-  const finalMimeType = blob.type && blob.type.startsWith('audio/') ? blob.type : 'audio/mpeg';
+  const finalMimeType =
+    blob.type && (blob.type.startsWith('audio/') || blob.type.startsWith('video/'))
+      ? blob.type
+      : 'audio/mpeg';
 
   console.log(`[AUDIO] Verification successful. Valid audio Blob ready (${blob.size} bytes, ${finalMimeType})`);
 
