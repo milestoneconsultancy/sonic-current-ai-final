@@ -49,13 +49,22 @@ import { FavoritesView } from './views/FavoritesView';
 import { DownloadsView } from './views/DownloadsView';
 import { DashboardView } from './views/DashboardView';
 import { DownloadOptionsModal } from './components/DownloadOptionsModal';
+import { WrongLanguageAlertModal } from './components/WrongLanguageAlertModal';
 import { initRealtimePresence, trackEvent } from './lib/analytics';
 import { auth } from './lib/firebase';
 import { onAuthStateChanged, User } from 'firebase/auth';
 
 export default function App() {
   // Navigation
-  const [currentTab, setCurrentTab] = useState<TabType>('home');
+  const [currentTab, setCurrentTab] = useState<TabType>(() => {
+    if (typeof window !== 'undefined') {
+      const path = window.location.pathname.toLowerCase();
+      if (path === '/dashboard' || window.location.hash === '#dashboard') {
+        return 'dashboard';
+      }
+    }
+    return 'home';
+  });
 
   // Auth & Admin State
   const [authUser, setAuthUser] = useState<User | null>(auth.currentUser);
@@ -65,7 +74,34 @@ export default function App() {
   }, []);
   const isAdmin = authUser?.email?.toLowerCase() === 'khandagalesuraj48@gmail.com';
 
-  // Language Preference State
+  // Keep route in sync with currentTab
+  useEffect(() => {
+    if (currentTab === 'dashboard') {
+      if (window.location.pathname !== '/dashboard') {
+        window.history.pushState(null, '', '/dashboard');
+      }
+    } else if (window.location.pathname === '/dashboard') {
+      window.history.pushState(null, '', '/');
+    }
+  }, [currentTab]);
+
+  useEffect(() => {
+    const handlePopState = () => {
+      const path = window.location.pathname.toLowerCase();
+      if (path === '/dashboard') {
+        setCurrentTab('dashboard');
+      }
+    };
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
+
+  // Language Preference State & Alert Modal
+  const [wrongLanguageData, setWrongLanguageData] = useState<{
+    detectedLanguage: string;
+    query: string;
+  } | null>(null);
+
   const [selectedLanguages, setSelectedLanguages] = useState<string[]>(() => {
     try {
       const saved = localStorage.getItem('sonic_language_prefs');
@@ -416,12 +452,29 @@ export default function App() {
     trackEvent('search', { query: query.trim() });
 
     try {
-      const response = await fetch(`/api/result?query=${encodeURIComponent(query.trim())}&page=1`);
+      const langs = selectedLanguages.join(',');
+      const response = await fetch(
+        `/api/result?query=${encodeURIComponent(query.trim())}&languages=${encodeURIComponent(langs)}&page=1`
+      );
       if (!response.ok) {
         throw new Error(`API error: ${response.status}`);
       }
 
       const data = await response.json();
+
+      // Check header for filtered language
+      const detectedLangHeader = response.headers.get('X-Detected-Language');
+      if (detectedLangHeader) {
+        try {
+          const detected = decodeURIComponent(detectedLangHeader);
+          if (detected) {
+            setWrongLanguageData({ detectedLanguage: detected, query: query.trim() });
+          }
+        } catch (e) {
+          console.warn('Error decoding language header:', e);
+        }
+      }
+
       if (!Array.isArray(data) || data.length === 0) {
         setSearchResults([]);
         setSearchError(`No songs found for "${query.trim()}".`);
@@ -482,8 +535,9 @@ export default function App() {
     const nextPage = searchPage + 1;
 
     try {
+      const langs = selectedLanguages.join(',');
       const response = await fetch(
-        `/api/result?query=${encodeURIComponent(searchQuery.trim())}&page=${nextPage}`
+        `/api/result?query=${encodeURIComponent(searchQuery.trim())}&languages=${encodeURIComponent(langs)}&page=${nextPage}`
       );
       if (response.ok) {
         const data = await response.json();
@@ -967,7 +1021,7 @@ export default function App() {
   const handleSaveDevice = async (song: Song, onProgress: (pct: number) => void): Promise<boolean> => {
     trackEvent('download', { song });
     onProgress(15);
-    const audioUrl = `/api/audio?url=${encodeURIComponent(song.url)}`;
+    const audioUrl = `/api/audio?url=${encodeURIComponent(song.url)}&download=true`;
     const response = await fetch(audioUrl);
     if (!response.ok) throw new Error('Failed to retrieve audio stream for device save.');
 
@@ -1011,7 +1065,7 @@ export default function App() {
     setDownloadingSet((prev) => new Set(prev).add(song.id));
 
     try {
-      const audioUrl = `/api/audio?url=${encodeURIComponent(song.url)}`;
+      const audioUrl = `/api/audio?url=${encodeURIComponent(song.url)}&download=true`;
       const response = await fetch(audioUrl);
       if (!response.ok) {
         throw new Error('Download request failed.');
@@ -1141,6 +1195,7 @@ export default function App() {
           onTabChange={setCurrentTab}
           theme={theme}
           onToggleTheme={handleToggleTheme}
+          isAdmin={isAdmin}
         />
 
         <main className="flex-1 p-4 sm:p-6 md:p-8 max-w-7xl mx-auto w-full">
@@ -1369,6 +1424,27 @@ export default function App() {
         onRemoveFromQueue={handleRemoveFromQueue}
         onClearQueue={handleClearQueue}
       />
+
+      {/* Wrong Language Alert Modal */}
+      {wrongLanguageData && (
+        <WrongLanguageAlertModal
+          detectedLanguage={wrongLanguageData.detectedLanguage}
+          selectedLanguages={selectedLanguages}
+          onClose={() => setWrongLanguageData(null)}
+          onChangeLanguage={() => {
+            setWrongLanguageData(null);
+            setCurrentTab('home');
+          }}
+          onAddLanguage={(lang) => {
+            const updated = Array.from(new Set([...selectedLanguages, lang]));
+            handleLanguageChange(updated);
+            setWrongLanguageData(null);
+            if (wrongLanguageData.query) {
+              executeSearch(wrongLanguageData.query);
+            }
+          }}
+        />
+      )}
 
       {/* Mobile Bottom Navigation */}
       <BottomNav

@@ -47,8 +47,10 @@ export const HomeView: React.FC<HomeViewProps> = ({
   useEffect(() => {
     let isMounted = true;
     async function loadGlobalTrending() {
+      setIsLoadingGlobal(true);
       try {
-        const response = await fetch('/api/trending');
+        const langs = selectedLanguages.join(',');
+        const response = await fetch(`/api/trending?languages=${encodeURIComponent(langs)}`);
         if (response.ok) {
           const data = await response.json();
           if (Array.isArray(data) && data.length > 0) {
@@ -75,7 +77,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [selectedLanguages]);
 
   // Load Your Trending (Personalized to User & Language Preferences)
   useEffect(() => {

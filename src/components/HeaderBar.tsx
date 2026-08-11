@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Music, Sun, Moon, Smartphone } from 'lucide-react';
+import { Music, Sun, Moon, Smartphone, ShieldCheck } from 'lucide-react';
 import { TabType } from '../types';
 
 interface HeaderBarProps {
@@ -7,6 +7,7 @@ interface HeaderBarProps {
   onTabChange: (tab: TabType) => void;
   theme: 'light' | 'dark';
   onToggleTheme: () => void;
+  isAdmin?: boolean;
 }
 
 export const HeaderBar: React.FC<HeaderBarProps> = ({
@@ -14,6 +15,7 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
   onTabChange,
   theme,
   onToggleTheme,
+  isAdmin = false,
 }) => {
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
   const [isInstalled, setIsInstalled] = useState(false);
@@ -90,6 +92,21 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
             <span className="hidden sm:inline">Install App</span>
           </button>
         )}
+
+        {/* Admin Dashboard Portal Button */}
+        <button
+          onClick={() => onTabChange('dashboard')}
+          aria-label="Admin Dashboard"
+          title="Admin Dashboard Portal"
+          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-bold transition shadow-xs cursor-pointer ${
+            isAdmin
+              ? 'bg-amber-500 text-slate-950 border-amber-500 hover:bg-amber-400'
+              : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 border-slate-200/60 dark:border-slate-700 hover:bg-slate-200 dark:hover:bg-slate-700'
+          }`}
+        >
+          <ShieldCheck className={`w-4 h-4 shrink-0 ${isAdmin ? 'text-slate-950' : 'text-amber-500'}`} />
+          <span className="hidden sm:inline">{isAdmin ? 'Dashboard' : 'Admin'}</span>
+        </button>
 
         {/* Theme Toggle Button */}
         <button

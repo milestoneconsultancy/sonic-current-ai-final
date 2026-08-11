@@ -467,6 +467,7 @@ async function searchSongsJioSaavn(query: string, page: number = 1) {
         const image = (song.image || '')
           .replace('150x150', '500x500')
           .replace('50x50', '500x500');
+        const songLang = cleanString(song.language || 'Hindi');
 
         formattedSongs.push({
           id: String(song.id),
@@ -481,6 +482,7 @@ async function searchSongsJioSaavn(query: string, page: number = 1) {
           perma_url: song.perma_url || '',
           url: mediaUrl,
           media_url: mediaUrl,
+          language: songLang,
           has320: song['320kbps'] === 'true' || mediaUrl.includes('_320'),
         });
       }
@@ -551,6 +553,7 @@ async function searchSongsJioSaavn(query: string, page: number = 1) {
       const image = (song.image || '')
         .replace('150x150', '500x500')
         .replace('50x50', '500x500');
+      const songLang = cleanString(song.language || 'Hindi');
 
       formattedSongs.push({
         id: String(song.id),
@@ -565,6 +568,7 @@ async function searchSongsJioSaavn(query: string, page: number = 1) {
         perma_url: song.perma_url || '',
         url: mediaUrl,
         media_url: mediaUrl,
+        language: songLang,
         has320: song['320kbps'] === 'true' || mediaUrl.includes('_320'),
       });
     }
@@ -724,6 +728,7 @@ app.get(['/result', '/result/', '/api/result', '/api/search', '/api/jiosaavn'], 
     let query = (req.query.query as string) || '';
     const rawPath = (req.query.path as string) || '';
     const pageParam = parseInt((req.query.page as string) || '1', 10) || 1;
+    const languagesParam = (req.query.languages as string || req.query.language as string || '').trim();
 
     if (!query && rawPath) {
       if (rawPath.includes('query=')) {
@@ -739,20 +744,36 @@ app.get(['/result', '/result/', '/api/result', '/api/search', '/api/jiosaavn'], 
 
     try {
       const intent = await getAISearchIntent(query);
+      
+      // Parse allowed languages
+      let allowedLangs: string[] = [];
+      if (languagesParam && !languagesParam.toLowerCase().includes('all indian languages')) {
+        allowedLangs = languagesParam.split(',').map(l => l.trim().toLowerCase()).filter(Boolean);
+      }
+
+      // If user specified languages and search query doesn't explicitly mention language, append primary language to target queries
       const targetQueries =
         intent.searchQueries && intent.searchQueries.length > 0
           ? intent.searchQueries
           : [intent.normalizedQuery || query];
 
-      let allSongs: any[] = [];
+      const searchQueriesWithLang: string[] = [];
       for (const tq of targetQueries) {
+        searchQueriesWithLang.push(tq);
+        if (allowedLangs.length > 0 && !allowedLangs.some(l => tq.toLowerCase().includes(l))) {
+          searchQueriesWithLang.push(`${tq} ${allowedLangs[0]}`);
+        }
+      }
+
+      let allSongs: any[] = [];
+      for (const tq of searchQueriesWithLang.slice(0, 6)) {
         const resList = await searchSongsJioSaavn(tq, pageParam);
         if (resList.length > 0) {
           allSongs.push(...resList);
         }
       }
 
-      // If broad intent or discovery (artist/movie/album/theme/genre), expand catalog by querying page 2 on pageParam 1
+      // Expand catalog if needed
       if (
         pageParam === 1 &&
         (intent.intent === 'artist' ||
@@ -762,7 +783,7 @@ app.get(['/result', '/result/', '/api/result', '/api/search', '/api/jiosaavn'], 
           intent.intent === 'genre' ||
           intent.intent === 'combination')
       ) {
-        const primaryQuery = targetQueries[0] || query;
+        const primaryQuery = searchQueriesWithLang[0] || query;
         const page2List = await searchSongsJioSaavn(primaryQuery, 2);
         if (page2List.length > 0) {
           allSongs.push(...page2List);
@@ -775,26 +796,66 @@ app.get(['/result', '/result/', '/api/result', '/api/search', '/api/jiosaavn'], 
 
       const deduplicatedSongs = scoreAndRankSongs(allSongs, query, intent);
 
+      // STRICT DATA-LEVEL LANGUAGE FILTERING
+      let finalSongs = deduplicatedSongs;
+      let detectedUnselectedLang = '';
+
+      if (allowedLangs.length > 0) {
+        finalSongs = deduplicatedSongs.filter(song => {
+          const sLang = (song.language || '').toLowerCase().trim();
+          if (!sLang) return true;
+          const isAllowed = allowedLangs.some(al => sLang.includes(al) || al.includes(sLang));
+          if (!isAllowed && !detectedUnselectedLang) {
+            detectedUnselectedLang = song.language || 'Hindi';
+          }
+          return isAllowed;
+        });
+      }
+
       res.setHeader('Cache-Control', 'public, max-age=300, stale-while-revalidate=60');
       res.setHeader('X-Context-Label', encodeURIComponent(intent.contextLabel || ''));
-      res.json(deduplicatedSongs);
+      if (detectedUnselectedLang && finalSongs.length === 0) {
+        res.setHeader('X-Detected-Language', encodeURIComponent(detectedUnselectedLang));
+      }
+      res.json(finalSongs);
     } catch (error) {
       console.error('[Search API Error]:', error);
       res.status(500).json({ error: 'Failed to fetch song search results' });
     }
   });
 
-  // 1c. Trending Songs Endpoint
+  // 1c. Trending Songs Endpoint with Language Filter
   app.get(['/api/trending', '/trending'], async (req, res) => {
     try {
-      const results = await searchSongsJioSaavn('latest trending hindi songs', 1);
+      const languagesParam = (req.query.languages as string || '').trim();
+      let trendQuery = 'latest trending indian songs';
+      let allowedLangs: string[] = [];
+
+      if (languagesParam && !languagesParam.toLowerCase().includes('all indian languages')) {
+        allowedLangs = languagesParam.split(',').map(l => l.trim().toLowerCase()).filter(Boolean);
+        if (allowedLangs.length > 0) {
+          trendQuery = `latest trending ${allowedLangs.join(' ')} songs`;
+        }
+      }
+
+      const results = await searchSongsJioSaavn(trendQuery, 1);
+      let finalResults = results;
+      if (allowedLangs.length > 0) {
+        finalResults = results.filter(s => {
+          const sLang = (s.language || '').toLowerCase().trim();
+          if (!sLang) return true;
+          return allowedLangs.some(al => sLang.includes(al) || al.includes(sLang));
+        });
+      }
+
       res.setHeader('Cache-Control', 'public, max-age=600, stale-while-revalidate=120');
-      res.json(results);
+      res.json(finalResults);
     } catch (error) {
       console.error('[Trending API Error]:', error);
       res.json([]);
     }
   });
+
   app.get(['/api/suggestions', '/api/autocomplete'], async (req, res) => {
     const query = (req.query.query as string) || '';
     if (!query || !query.trim()) {
@@ -803,16 +864,30 @@ app.get(['/result', '/result/', '/api/result', '/api/search', '/api/jiosaavn'], 
     }
 
     try {
+      const languagesParam = (req.query.languages as string || '').trim();
+      let allowedLangs: string[] = [];
+      if (languagesParam && !languagesParam.toLowerCase().includes('all indian languages')) {
+        allowedLangs = languagesParam.split(',').map(l => l.trim().toLowerCase()).filter(Boolean);
+      }
+
       const results = await searchSongsJioSaavn(query.trim(), 1);
+      let filtered = results;
+      if (allowedLangs.length > 0) {
+        filtered = results.filter(s => {
+          const sLang = (s.language || '').toLowerCase().trim();
+          if (!sLang) return true;
+          return allowedLangs.some(al => sLang.includes(al) || al.includes(sLang));
+        });
+      }
       res.setHeader('Cache-Control', 'public, max-age=300, stale-while-revalidate=60');
-      res.json(results.slice(0, 8));
+      res.json(filtered.slice(0, 8));
     } catch (error) {
       console.error('[Suggestions API Error]:', error);
       res.json([]);
     }
   });
 
-  // 2. Audio Stream Proxy Endpoint with HTTP Range support & 1MB chunk capping for serverless safety
+  // 2. Audio Stream Proxy Endpoint with HTTP Range support & direct download proxy
   app.get('/api/audio', async (req, res) => {
     const rawUrl = req.query.url as string;
     if (!rawUrl) {
@@ -821,6 +896,7 @@ app.get(['/result', '/result/', '/api/result', '/api/search', '/api/jiosaavn'], 
     }
 
     const targetUrl = decodeURIComponent(rawUrl);
+    const isDownload = req.query.download === 'true';
 
     try {
       const parsedUrl = new URL(targetUrl);
@@ -832,9 +908,34 @@ app.get(['/result', '/result/', '/api/result', '/api/search', '/api/jiosaavn'], 
 
       const rangeHeader = req.headers.range as string | undefined;
 
-      // If no Range header requested, redirect directly to CDN URL for instant full streaming
-      if (!rangeHeader) {
-        res.redirect(302, targetUrl);
+      // Full download proxy OR non-ranged stream (prevents CORS issues on browser fetch)
+      if (isDownload || !rangeHeader) {
+        const response = await fetch(targetUrl, {
+          headers: {
+            'User-Agent':
+              'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+          },
+        });
+
+        if (!response.ok) {
+          res.status(response.status).json({ error: 'Audio source unavailable' });
+          return;
+        }
+
+        const contentType = response.headers.get('content-type') || 'audio/mpeg';
+        const contentLength = response.headers.get('content-length');
+
+        res.status(200);
+        res.setHeader('Content-Type', contentType);
+        if (contentLength) res.setHeader('Content-Length', contentLength);
+        res.setHeader('Access-Control-Allow-Origin', '*');
+        res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+        if (isDownload) {
+          res.setHeader('Content-Disposition', 'attachment; filename="song.mp3"');
+        }
+
+        const arrayBuffer = await response.arrayBuffer();
+        res.send(Buffer.from(arrayBuffer));
         return;
       }
 
@@ -879,6 +980,7 @@ app.get(['/result', '/result/', '/api/result', '/api/search', '/api/jiosaavn'], 
       if (contentLength) res.setHeader('Content-Length', contentLength);
       if (contentRange) res.setHeader('Content-Range', contentRange);
       res.setHeader('Accept-Ranges', 'bytes');
+      res.setHeader('Access-Control-Allow-Origin', '*');
       res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
 
       const arrayBuffer = await response.arrayBuffer();
