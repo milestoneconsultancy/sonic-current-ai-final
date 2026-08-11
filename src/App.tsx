@@ -1038,21 +1038,12 @@ export default function App() {
 
     console.log(`[DEVICE] Audio Blob verified successfully (${size} bytes)`);
 
-    // Check Capacitor Native filesystem
+    // Check Capacitor Native filesystem / MediaStore
     const isCapacitor = typeof (window as any).Capacitor !== 'undefined';
     if (isCapacitor) {
       try {
-        const { Filesystem, Directory } = await import('@capacitor/filesystem');
-
-        // Check & request storage permissions if needed
-        try {
-          const perm = await Filesystem.checkPermissions();
-          if (perm.publicStorage !== 'granted') {
-            await Filesystem.requestPermissions();
-          }
-        } catch (permErr) {
-          console.warn('[DEVICE] Permission check warning:', permErr);
-        }
+        const { registerPlugin } = await import('@capacitor/core');
+        const MediaStoreSaver = registerPlugin<any>('MediaStoreSaver');
 
         const reader = new FileReader();
         const base64Data = await new Promise<string>((resolve, reject) => {
@@ -1065,7 +1056,36 @@ export default function App() {
           reader.readAsDataURL(audioBlob);
         });
 
-        // Try writing to public Download directory first, fallback to Documents
+        // Try native MediaStore save to public Downloads
+        try {
+          const res = await MediaStoreSaver.saveToDownloads({
+            fileName,
+            mimeType: 'audio/mpeg',
+            base64Data,
+          });
+
+          if (res && res.uri && res.size > 0) {
+            console.log(
+              `[DEVICE] MediaStore public Downloads save verified: ${res.uri} (${res.size} bytes)`
+            );
+            onProgress(100);
+            return true;
+          }
+        } catch (mediaStoreErr) {
+          console.warn('[DEVICE] MediaStore plugin save failed, trying Filesystem fallback:', mediaStoreErr);
+        }
+
+        // Fallback: Capacitor Filesystem
+        const { Filesystem, Directory } = await import('@capacitor/filesystem');
+        try {
+          const perm = await Filesystem.checkPermissions();
+          if (perm.publicStorage !== 'granted') {
+            await Filesystem.requestPermissions();
+          }
+        } catch (permErr) {
+          console.warn('[DEVICE] Permission check warning:', permErr);
+        }
+
         let targetDirectory = Directory.ExternalStorage;
         let targetPath = `Download/${fileName}`;
         let writeSuccess = false;
@@ -1092,7 +1112,6 @@ export default function App() {
         }
 
         if (writeSuccess) {
-          // Verify native file exists and size on disk > 0
           const stat = await Filesystem.stat({
             path: targetPath,
             directory: targetDirectory,
