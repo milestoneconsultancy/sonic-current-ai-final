@@ -48,6 +48,7 @@ import { HistoryView } from './views/HistoryView';
 import { FavoritesView } from './views/FavoritesView';
 import { DownloadsView } from './views/DownloadsView';
 import { DashboardView } from './views/DashboardView';
+import { DownloadOptionsModal } from './components/DownloadOptionsModal';
 import { initRealtimePresence, trackEvent } from './lib/analytics';
 import { auth } from './lib/firebase';
 import { onAuthStateChanged, User } from 'firebase/auth';
@@ -952,6 +953,47 @@ export default function App() {
     trackEvent('like', { song });
   };
 
+  // Download Options Modal State
+  const [modalSongForDownload, setModalSongForDownload] = useState<Song | null>(null);
+
+  const handleTriggerDownloadModal = (song: Song) => {
+    setModalSongForDownload(song);
+  };
+
+  const handleSaveToAppLibrary = async (song: Song) => {
+    await handleDownloadSong(song);
+  };
+
+  const handleSaveDevice = async (song: Song, onProgress: (pct: number) => void): Promise<boolean> => {
+    trackEvent('download', { song });
+    onProgress(15);
+    const audioUrl = `/api/audio?url=${encodeURIComponent(song.url)}`;
+    const response = await fetch(audioUrl);
+    if (!response.ok) throw new Error('Failed to retrieve audio stream for device save.');
+
+    onProgress(50);
+    const audioBlob = await response.blob();
+    if (audioBlob.size < 1000) throw new Error('File download incomplete.');
+
+    onProgress(85);
+    const cleanTitle = song.title.replace(/[^a-zA-Z0-9\s-_]/g, '');
+    const cleanArtist = song.artist.replace(/[^a-zA-Z0-9\s-_]/g, '');
+    const fileName = `${cleanArtist || 'Artist'} - ${cleanTitle || 'Song'}.mp3`;
+
+    // Browser / Device Download
+    const blobUrl = URL.createObjectURL(audioBlob);
+    const a = document.createElement('a');
+    a.href = blobUrl;
+    a.download = fileName;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(blobUrl), 10000);
+
+    onProgress(100);
+    return true;
+  };
+
   // Download Management (IndexedDB)
   const handleDownloadSong = async (song: Song) => {
     trackEvent('download', { song });
@@ -1116,7 +1158,7 @@ export default function App() {
               onPlaySong={handlePlaySong}
               onPlayAll={handlePlayAll}
               onToggleFavorite={handleToggleFavoriteSong}
-              onDownloadSong={handleDownloadSong}
+              onDownloadSong={handleTriggerDownloadModal}
               onAddToQueue={handleAddToQueue}
             />
           )}
@@ -1144,7 +1186,7 @@ export default function App() {
               onPlaySong={handlePlaySong}
               onPlayAll={handlePlayAll}
               onToggleFavorite={handleToggleFavoriteSong}
-              onDownloadSong={handleDownloadSong}
+              onDownloadSong={handleTriggerDownloadModal}
               onAddToQueue={handleAddToQueue}
               onAddAllToQueue={handleAddAllToQueue}
             />
@@ -1175,7 +1217,7 @@ export default function App() {
               }}
               onPlaySong={handlePlaySong}
               onToggleFavorite={handleToggleFavoriteSong}
-              onDownloadSong={handleDownloadSong}
+              onDownloadSong={handleTriggerDownloadModal}
               onAddToQueue={handleAddToQueue}
             />
           )}
@@ -1191,7 +1233,7 @@ export default function App() {
               onPlaySong={handlePlaySong}
               onPlayAll={handlePlayAll}
               onToggleFavorite={handleToggleFavoriteSong}
-              onDownloadSong={handleDownloadSong}
+              onDownloadSong={handleTriggerDownloadModal}
               onAddToQueue={handleAddToQueue}
               onAddAllToQueue={handleAddAllToQueue}
             />
@@ -1295,12 +1337,22 @@ export default function App() {
         onToggleRepeat={handleToggleRepeat}
         onToggleShuffle={handleToggleShuffle}
         onToggleFavorite={handleToggleFavoriteSong}
-        onDownload={handleDownloadSong}
+        onDownload={handleTriggerDownloadModal}
         onSelectSongFromQueue={(song, idx) => {
           setQueueIndex(idx);
           handlePlaySong(song);
         }}
       />
+
+      {/* Download Options Modal */}
+      {modalSongForDownload && (
+        <DownloadOptionsModal
+          song={modalSongForDownload}
+          onClose={() => setModalSongForDownload(null)}
+          onSaveAppLibrary={handleSaveToAppLibrary}
+          onSaveDevice={handleSaveDevice}
+        />
+      )}
 
       {/* Queue Drawer */}
       <QueueDrawer
