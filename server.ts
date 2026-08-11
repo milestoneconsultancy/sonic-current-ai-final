@@ -364,18 +364,26 @@ Return strictly JSON:
 }
 
 const ALLOWED_HOSTS = [
+  'saavncdn.com',
+  'jiosaavn.com',
+  'jio.com',
+  'saavn.com',
   'h.saavncdn.com',
   'aac.saavncdn.com',
   'preview.saavncdn.com',
   'www.jiosaavn.com',
-  'jiosaavn.com',
   'jiotunepreview.jio.com',
-  'jio.com',
 ];
 
 function isHostAllowed(hostname: string): boolean {
-  return ALLOWED_HOSTS.some(
-    host => hostname === host || hostname.endsWith(`.${host}`)
+  if (!hostname) return false;
+  const h = hostname.toLowerCase();
+  return (
+    h.includes('saavncdn.com') ||
+    h.includes('jiosaavn.com') ||
+    h.includes('jio.com') ||
+    h.includes('saavn.com') ||
+    ALLOWED_HOSTS.some(host => h === host || h.endsWith(`.${host}`))
   );
 }
 
@@ -895,14 +903,21 @@ app.get(['/result', '/result/', '/api/result', '/api/search', '/api/jiosaavn'], 
       return;
     }
 
-    const targetUrl = decodeURIComponent(rawUrl);
+    let targetUrl = '';
+    try {
+      targetUrl = decodeURIComponent(rawUrl);
+    } catch (e) {
+      targetUrl = rawUrl;
+    }
+
     const isDownload = req.query.download === 'true';
+    const filenameParam = (req.query.filename as string) || 'song.mp3';
 
     try {
       const parsedUrl = new URL(targetUrl);
       if (!isHostAllowed(parsedUrl.hostname)) {
-        console.warn(`[Audio Proxy] Blocked request to non-allowed host: ${parsedUrl.hostname}`);
-        res.status(403).json({ error: 'Host not permitted' });
+        console.warn(`[AUDIO Proxy] Blocked request to host: ${parsedUrl.hostname}`);
+        res.status(403).json({ error: `Host not permitted: ${parsedUrl.hostname}` });
         return;
       }
 
@@ -910,32 +925,70 @@ app.get(['/result', '/result/', '/api/result', '/api/search', '/api/jiosaavn'], 
 
       // Full download proxy OR non-ranged stream (prevents CORS issues on browser fetch)
       if (isDownload || !rangeHeader) {
+        console.log(`[AUDIO Proxy] Fetching full audio for: ${targetUrl}`);
         const response = await fetch(targetUrl, {
           headers: {
             'User-Agent':
               'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
           },
+          redirect: 'follow',
         });
 
         if (!response.ok) {
-          res.status(response.status).json({ error: 'Audio source unavailable' });
+          console.error(`[AUDIO Proxy] Upstream status ${response.status} for ${targetUrl}`);
+          res.status(response.status >= 400 && response.status < 600 ? response.status : 502).json({
+            error: `Audio source unavailable (status ${response.status})`,
+          });
           return;
         }
 
-        const contentType = response.headers.get('content-type') || 'audio/mpeg';
-        const contentLength = response.headers.get('content-length');
+        const rawContentType = response.headers.get('content-type') || '';
+        console.log(`[AUDIO Proxy] Upstream content-type: ${rawContentType}`);
 
-        res.status(200);
-        res.setHeader('Content-Type', contentType);
-        if (contentLength) res.setHeader('Content-Length', contentLength);
-        res.setHeader('Access-Control-Allow-Origin', '*');
-        res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
-        if (isDownload) {
-          res.setHeader('Content-Disposition', 'attachment; filename="song.mp3"');
+        if (
+          rawContentType.toLowerCase().includes('text/html') ||
+          rawContentType.toLowerCase().includes('application/json')
+        ) {
+          console.error(`[AUDIO Proxy] Upstream returned non-audio contentType: ${rawContentType}`);
+          res.status(502).json({ error: 'Upstream audio source returned invalid content format' });
+          return;
         }
 
         const arrayBuffer = await response.arrayBuffer();
-        res.send(Buffer.from(arrayBuffer));
+        const buffer = Buffer.from(arrayBuffer);
+
+        if (buffer.length === 0) {
+          console.error('[AUDIO Proxy] Upstream returned 0 bytes');
+          res.status(502).json({ error: 'Audio source returned empty response' });
+          return;
+        }
+
+        if (buffer.length < 1000) {
+          console.error(`[AUDIO Proxy] Payload too small: ${buffer.length} bytes`);
+          res.status(502).json({ error: 'Audio payload too small or truncated' });
+          return;
+        }
+
+        console.log(`[AUDIO Proxy] Successfully retrieved ${buffer.length} bytes for ${filenameParam}`);
+
+        const contentType =
+          rawContentType && rawContentType.startsWith('audio/')
+            ? rawContentType
+            : 'audio/mpeg';
+
+        res.status(200);
+        res.setHeader('Content-Type', contentType);
+        res.setHeader('Content-Length', buffer.length.toString());
+        res.setHeader('Access-Control-Allow-Origin', '*');
+        res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+        if (isDownload) {
+          res.setHeader(
+            'Content-Disposition',
+            `attachment; filename="${encodeURIComponent(filenameParam)}"`
+          );
+        }
+
+        res.send(buffer);
         return;
       }
 
@@ -966,12 +1019,14 @@ app.get(['/result', '/result/', '/api/result', '/api/search', '/api/jiosaavn'], 
       });
 
       if (!response.ok && response.status !== 206) {
-        console.warn(`[Audio Proxy] Upstream status ${response.status} for ${targetUrl}`);
-        res.status(response.status).json({ error: 'Audio source unavailable' });
+        console.warn(`[AUDIO Proxy] Upstream status ${response.status} for ${targetUrl}`);
+        res.status(response.status >= 400 && response.status < 600 ? response.status : 502).json({
+          error: 'Audio source unavailable',
+        });
         return;
       }
 
-      const contentType = response.headers.get('content-type') || 'audio/mp4';
+      const contentType = response.headers.get('content-type') || 'audio/mpeg';
       const contentLength = response.headers.get('content-length');
       const contentRange = response.headers.get('content-range');
 
@@ -987,8 +1042,8 @@ app.get(['/result', '/result/', '/api/result', '/api/search', '/api/jiosaavn'], 
       const buffer = Buffer.from(arrayBuffer);
       res.send(buffer);
       return;
-    } catch (error) {
-      console.error('[Audio Proxy Stream Error]:', error);
+    } catch (error: any) {
+      console.error('[AUDIO Proxy Error]:', error?.message || error);
       res.status(502).json({ error: 'Failed to stream audio file' });
     }
   });

@@ -33,6 +33,7 @@ import {
   clearAllDownloads,
   getStorageStats,
 } from './lib/db';
+import { fetchAudioBlob } from './lib/audioFetcher';
 import { deduplicateSongs, getCanonicalSongKey } from './lib/dedupe';
 
 import { Sidebar } from './components/Sidebar';
@@ -1018,37 +1019,85 @@ export default function App() {
     await handleDownloadSong(song);
   };
 
-  const handleSaveDevice = async (song: Song, onProgress: (pct: number) => void): Promise<boolean> => {
+  const handleSaveDevice = async (
+    song: Song,
+    onProgress: (pct: number) => void
+  ): Promise<boolean> => {
     trackEvent('download', { song });
-    onProgress(15);
-    const audioUrl = `/api/audio?url=${encodeURIComponent(song.url)}&download=true`;
-    const response = await fetch(audioUrl);
-    if (!response.ok) throw new Error('Failed to retrieve audio stream for device save.');
+    onProgress(10);
 
-    onProgress(50);
-    const audioBlob = await response.blob();
-    if (audioBlob.size < 1000) throw new Error('File download incomplete.');
-
-    onProgress(85);
     const cleanTitle = song.title.replace(/[^a-zA-Z0-9\s-_]/g, '');
     const cleanArtist = song.artist.replace(/[^a-zA-Z0-9\s-_]/g, '');
     const fileName = `${cleanArtist || 'Artist'} - ${cleanTitle || 'Song'}.mp3`;
 
-    // Browser / Device Download
+    console.log(`[DEVICE] Initiating device download for: "${fileName}"`);
+
+    // Fetch verified audio blob
+    const { blob: audioBlob, size } = await fetchAudioBlob(song.url, fileName);
+    onProgress(60);
+
+    console.log(`[DEVICE] Audio Blob verified successfully (${size} bytes)`);
+
+    // Check Capacitor Native filesystem
+    const isCapacitor = typeof (window as any).Capacitor !== 'undefined';
+    if (isCapacitor) {
+      try {
+        const { Filesystem, Directory } = await import('@capacitor/filesystem');
+        const reader = new FileReader();
+        const base64Data = await new Promise<string>((resolve, reject) => {
+          reader.onloadend = () => {
+            const res = reader.result as string;
+            const base64 = res.includes(',') ? res.split(',')[1] : res;
+            resolve(base64);
+          };
+          reader.onerror = reject;
+          reader.readAsDataURL(audioBlob);
+        });
+
+        await Filesystem.writeFile({
+          path: fileName,
+          data: base64Data,
+          directory: Directory.Documents,
+        });
+
+        // Verify native file exists and size > 0
+        const stat = await Filesystem.stat({
+          path: fileName,
+          directory: Directory.Documents,
+        });
+
+        if (!stat || stat.size === 0) {
+          throw new Error('Capacitor native file write failed: Output file size is 0.');
+        }
+
+        console.log(`[DEVICE] Capacitor native file write verified (${stat.size} bytes)`);
+        onProgress(100);
+        return true;
+      } catch (capErr: any) {
+        console.warn('[DEVICE] Capacitor native save fallback:', capErr?.message || capErr);
+      }
+    }
+
+    // Standard Browser Download via Blob URL
+    onProgress(85);
     const blobUrl = URL.createObjectURL(audioBlob);
     const a = document.createElement('a');
     a.href = blobUrl;
     a.download = fileName;
+    a.style.display = 'none';
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
-    setTimeout(() => URL.revokeObjectURL(blobUrl), 10000);
+
+    setTimeout(() => {
+      URL.revokeObjectURL(blobUrl);
+    }, 15000);
 
     onProgress(100);
     return true;
   };
 
-  // Download Management (IndexedDB)
+  // Download Management (IndexedDB App Offline Library)
   const handleDownloadSong = async (song: Song) => {
     trackEvent('download', { song });
     const isAlreadyDownloaded = downloadedSongs.some((d) => {
@@ -1065,13 +1114,12 @@ export default function App() {
     setDownloadingSet((prev) => new Set(prev).add(song.id));
 
     try {
-      const audioUrl = `/api/audio?url=${encodeURIComponent(song.url)}&download=true`;
-      const response = await fetch(audioUrl);
-      if (!response.ok) {
-        throw new Error('Download request failed.');
-      }
+      const cleanTitle = song.title.replace(/[^a-zA-Z0-9\s-_]/g, '');
+      const cleanArtist = song.artist.replace(/[^a-zA-Z0-9\s-_]/g, '');
+      const fileName = `${cleanArtist || 'Artist'} - ${cleanTitle || 'Song'}.mp3`;
 
-      const audioBlob = await response.blob();
+      console.log(`[OFFLINE] Starting App Library download for "${song.title}"`);
+      const { blob: audioBlob } = await fetchAudioBlob(song.url, fileName);
 
       // Convert artwork to data URL for offline display if remote
       let offlineArtwork = song.artwork;
@@ -1093,10 +1141,14 @@ export default function App() {
       }
 
       const songToSave = { ...song, artwork: offlineArtwork };
+      console.log(`[OFFLINE] Writing "${song.title}" to IndexedDB...`);
       await saveDownloadedSong(songToSave, audioBlob);
+      console.log(`[OFFLINE] Store and read-back verification complete for "${song.title}"`);
       await refreshDownloads();
-    } catch (err) {
-      console.error('Download error:', err);
+    } catch (err: any) {
+      console.error('[OFFLINE] Download failed:', err?.message || err);
+      // RETHROW so calling modal or component knows the download failed
+      throw new Error(err?.message || 'Unable to retrieve this audio file. Please try again.');
     } finally {
       setDownloadingSet((prev) => {
         const next = new Set(prev);

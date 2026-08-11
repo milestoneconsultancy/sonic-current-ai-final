@@ -21,6 +21,13 @@ function openDB(): Promise<IDBDatabase> {
 }
 
 export async function saveDownloadedSong(song: Song, audioBlob: Blob): Promise<DownloadedSong> {
+  console.log(`[OFFLINE] IndexedDB transaction started for song: "${song.title}" (ID: ${song.id})`);
+
+  if (!audioBlob || !(audioBlob instanceof Blob) || audioBlob.size < 10000) {
+    console.error('[OFFLINE] Save aborted: Invalid audio Blob provided', audioBlob);
+    throw new Error('Cannot save offline: Audio data is missing or corrupted.');
+  }
+
   const db = await openDB();
   const downloadedItem: DownloadedSong = {
     id: song.id,
@@ -37,10 +44,42 @@ export async function saveDownloadedSong(song: Song, audioBlob: Blob): Promise<D
   return new Promise((resolve, reject) => {
     const tx = db.transaction(STORE_NAME, 'readwrite');
     const store = tx.objectStore(STORE_NAME);
-    const request = store.put(downloadedItem);
+    const putRequest = store.put(downloadedItem);
 
-    request.onsuccess = () => resolve(downloadedItem);
-    request.onerror = () => reject(request.error);
+    tx.oncomplete = async () => {
+      console.log(`[OFFLINE] IndexedDB transaction completed for song ID: ${song.id}`);
+
+      // Mandatory read-back verification
+      try {
+        console.log(`[OFFLINE] read-back verification starting for song ID: ${song.id}`);
+        const verifiedRecord = await getDownloadedSong(song.id);
+        if (
+          verifiedRecord &&
+          verifiedRecord.audioBlob &&
+          verifiedRecord.audioBlob instanceof Blob &&
+          verifiedRecord.audioBlob.size > 0
+        ) {
+          console.log(`[OFFLINE] read-back verification SUCCEEDED (${verifiedRecord.audioBlob.size} bytes stored)`);
+          resolve(verifiedRecord);
+        } else {
+          console.error(`[OFFLINE] read-back verification FAILED: Record in IndexedDB missing or empty blob`);
+          reject(new Error('IndexedDB storage verification failed: Stored record is incomplete.'));
+        }
+      } catch (verifyErr) {
+        console.error('[OFFLINE] read-back error:', verifyErr);
+        reject(new Error('IndexedDB verification failed post-write.'));
+      }
+    };
+
+    tx.onerror = () => {
+      console.error('[OFFLINE] IndexedDB transaction error:', tx.error || putRequest.error);
+      reject(tx.error || putRequest.error || new Error('IndexedDB transaction failed.'));
+    };
+
+    tx.onabort = () => {
+      console.error('[OFFLINE] IndexedDB transaction aborted');
+      reject(new Error('IndexedDB write transaction was aborted.'));
+    };
   });
 }
 
@@ -65,9 +104,9 @@ export async function getAllDownloadedSongs(): Promise<DownloadedSong[]> {
 
     request.onsuccess = () => {
       const list = (request.result || []) as DownloadedSong[];
-      // Sort newest first
-      list.sort((a, b) => b.timestamp - a.timestamp);
-      resolve(list);
+      const validList = list.filter((item) => item && item.audioBlob && item.audioBlob.size > 0);
+      validList.sort((a, b) => b.timestamp - a.timestamp);
+      resolve(validList);
     };
     request.onerror = () => reject(request.error);
   });
@@ -100,7 +139,7 @@ export async function clearAllDownloads(): Promise<void> {
 export async function getStorageStats(): Promise<{ count: number; totalBytes: number; formattedSize: string }> {
   try {
     const songs = await getAllDownloadedSongs();
-    const totalBytes = songs.reduce((acc, song) => acc + (song.fileSize || 0), 0);
+    const totalBytes = songs.reduce((acc, song) => acc + (song.fileSize || song.audioBlob?.size || 0), 0);
     
     let formattedSize = '0 B';
     if (totalBytes > 1024 * 1024 * 1024) {
