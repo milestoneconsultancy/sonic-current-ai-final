@@ -47,10 +47,55 @@ import { SearchView } from './views/SearchView';
 import { HistoryView } from './views/HistoryView';
 import { FavoritesView } from './views/FavoritesView';
 import { DownloadsView } from './views/DownloadsView';
+import { DashboardView } from './views/DashboardView';
+import { initRealtimePresence, trackEvent } from './lib/analytics';
+import { auth } from './lib/firebase';
+import { onAuthStateChanged, User } from 'firebase/auth';
 
 export default function App() {
   // Navigation
   const [currentTab, setCurrentTab] = useState<TabType>('home');
+
+  // Auth & Admin State
+  const [authUser, setAuthUser] = useState<User | null>(auth.currentUser);
+  useEffect(() => {
+    const unsub = onAuthStateChanged(auth, (user) => setAuthUser(user));
+    return () => unsub();
+  }, []);
+  const isAdmin = authUser?.email?.toLowerCase() === 'khandagalesuraj48@gmail.com';
+
+  // Language Preference State
+  const [selectedLanguages, setSelectedLanguages] = useState<string[]>(() => {
+    try {
+      const saved = localStorage.getItem('sonic_language_prefs');
+      if (saved) return JSON.parse(saved);
+    } catch (e) {
+      console.warn(e);
+    }
+    return ['Hindi'];
+  });
+
+  const handleLanguageChange = (langs: string[]) => {
+    setSelectedLanguages(langs);
+    try {
+      localStorage.setItem('sonic_language_prefs', JSON.stringify(langs));
+    } catch (e) {
+      console.warn(e);
+    }
+  };
+
+  // Realtime Presence Listener
+  useEffect(() => {
+    const cleanup = initRealtimePresence();
+    return () => {
+      if (cleanup) cleanup();
+    };
+  }, []);
+
+  // Track Page Views
+  useEffect(() => {
+    trackEvent('visit', { page: currentTab });
+  }, [currentTab]);
 
   // Search State
   const [searchQuery, setSearchQuery] = useState('');
@@ -367,6 +412,8 @@ export default function App() {
     setSearchPage(1);
     setHasMoreResults(true);
 
+    trackEvent('search', { query: query.trim() });
+
     try {
       const response = await fetch(`/api/result?query=${encodeURIComponent(query.trim())}&page=1`);
       if (!response.ok) {
@@ -547,6 +594,9 @@ export default function App() {
 
       setCurrentSong(song);
       setIsPlaying(true);
+
+      // Track playback in analytics
+      trackEvent('song_play', { song, language: selectedLanguages.join(',') });
 
       // Add to recently played
       const updatedRP = addRecentlyPlayed(song);
@@ -899,10 +949,12 @@ export default function App() {
   const handleToggleFavoriteSong = (song: Song) => {
     toggleFavorite(song);
     setFavorites(getFavorites());
+    trackEvent('like', { song });
   };
 
   // Download Management (IndexedDB)
   const handleDownloadSong = async (song: Song) => {
+    trackEvent('download', { song });
     const isAlreadyDownloaded = downloadedSongs.some((d) => {
       if (d.id === song.id) return true;
       const t1 = d.title.trim().toLowerCase();
@@ -1031,6 +1083,7 @@ export default function App() {
         onTabChange={setCurrentTab}
         favoritesCount={favorites.length}
         downloadsCount={downloadedSongs.length}
+        isAdmin={isAdmin}
       />
 
       {/* Main Content Area */}
@@ -1058,12 +1111,18 @@ export default function App() {
               favoritesSet={favoritesSet}
               downloadedSet={downloadedSet}
               downloadingSet={downloadingSet}
+              selectedLanguages={selectedLanguages}
+              onLanguageChange={handleLanguageChange}
               onPlaySong={handlePlaySong}
               onPlayAll={handlePlayAll}
               onToggleFavorite={handleToggleFavoriteSong}
               onDownloadSong={handleDownloadSong}
               onAddToQueue={handleAddToQueue}
             />
+          )}
+
+          {currentTab === 'dashboard' && (
+            <DashboardView onTabChange={setCurrentTab} />
           )}
 
           {currentTab === 'search' && (
@@ -1263,8 +1322,8 @@ export default function App() {
       <BottomNav
         currentTab={currentTab}
         onTabChange={setCurrentTab}
-        favoritesCount={favorites.length}
         downloadsCount={downloadedSongs.length}
+        isAdmin={isAdmin}
       />
     </div>
   );

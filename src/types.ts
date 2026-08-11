@@ -74,7 +74,7 @@ export interface UserPreference {
   updatedAt: string;
 }
 
-export type TabType = 'home' | 'search' | 'history' | 'favorites' | 'downloads' | 'playlists' | 'account' | 'login' | 'signup';
+export type TabType = 'home' | 'search' | 'downloads' | 'dashboard' | 'history' | 'favorites' | 'playlists' | 'account' | 'login' | 'signup';
 
 export type RepeatMode = 'off' | 'one' | 'all';
 

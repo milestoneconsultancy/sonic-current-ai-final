@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from 'react';
-import { Search, Heart, Download, Clock, Sparkles, Play, Flame } from 'lucide-react';
+import { Search, Heart, Download, Clock, Play, Flame, Sparkles, UserCheck } from 'lucide-react';
 import { Song, TabType, RecentlyPlayedItem } from '../types';
 import { SongCard } from '../components/SongCard';
 import { SongListItem } from '../components/SongListItem';
+import { LanguageSelector } from '../components/LanguageSelector';
 
 interface HomeViewProps {
   onTabChange: (tab: TabType) => void;
@@ -12,6 +13,8 @@ interface HomeViewProps {
   favoritesSet: Set<string>;
   downloadedSet: Set<string>;
   downloadingSet: Set<string>;
+  selectedLanguages: string[];
+  onLanguageChange: (langs: string[]) => void;
   onPlaySong: (song: Song) => void;
   onPlayAll: (songs: Song[]) => void;
   onToggleFavorite: (song: Song) => void;
@@ -27,18 +30,23 @@ export const HomeView: React.FC<HomeViewProps> = ({
   favoritesSet,
   downloadedSet,
   downloadingSet,
+  selectedLanguages,
+  onLanguageChange,
   onPlaySong,
   onPlayAll,
   onToggleFavorite,
   onDownloadSong,
   onAddToQueue,
 }) => {
-  const [trendingSongs, setTrendingSongs] = useState<Song[]>([]);
-  const [isLoadingTrending, setIsLoadingTrending] = useState<boolean>(true);
+  const [globalTrending, setGlobalTrending] = useState<Song[]>([]);
+  const [yourTrending, setYourTrending] = useState<Song[]>([]);
+  const [isLoadingGlobal, setIsLoadingGlobal] = useState<boolean>(true);
+  const [isLoadingPersonal, setIsLoadingPersonal] = useState<boolean>(true);
 
+  // Load Global Trending
   useEffect(() => {
     let isMounted = true;
-    async function loadTrending() {
+    async function loadGlobalTrending() {
       try {
         const response = await fetch('/api/trending');
         if (response.ok) {
@@ -54,26 +62,93 @@ export const HomeView: React.FC<HomeViewProps> = ({
               url: String(item.url || item.media_url || ''),
               permaUrl: String(item.perma_url || ''),
             }));
-            if (isMounted) {
-              setTrendingSongs(mapped);
-            }
+            if (isMounted) setGlobalTrending(mapped);
           }
         }
       } catch (err) {
-        console.error('Failed to load trending songs:', err);
+        console.error('Failed to load global trending songs:', err);
       } finally {
-        if (isMounted) setIsLoadingTrending(false);
+        if (isMounted) setIsLoadingGlobal(false);
       }
     }
-    loadTrending();
+    loadGlobalTrending();
     return () => {
       isMounted = false;
     };
   }, []);
 
+  // Load Your Trending (Personalized to User & Language Preferences)
+  useEffect(() => {
+    let isMounted = true;
+    async function loadYourTrending() {
+      setIsLoadingPersonal(true);
+      try {
+        // Construct targeted query from user's history and selected languages
+        let langPrefix = selectedLanguages.includes('All Indian Languages')
+          ? 'latest indian hits'
+          : selectedLanguages.slice(0, 2).join(' ') + ' trending hits';
+
+        if (recentlyPlayed.length > 0) {
+          const topArtist = recentlyPlayed[0]?.song?.artist || '';
+          if (topArtist) {
+            langPrefix = `${topArtist} ${selectedLanguages.includes('All Indian Languages') ? '' : selectedLanguages[0] || ''} hits`;
+          }
+        }
+
+        const response = await fetch(`/api/search?query=${encodeURIComponent(langPrefix)}`);
+        if (response.ok) {
+          const data = await response.json();
+          if (Array.isArray(data) && data.length > 0) {
+            const mapped: Song[] = data.map((item: any) => ({
+              id: String(item.id || ''),
+              title: String(item.title || item.song || 'Unknown Title'),
+              artist: String(item.artist || item.singers || 'Unknown Artist'),
+              album: String(item.album || ''),
+              duration: String(item.duration || '0'),
+              artwork: String(item.artwork || item.image || ''),
+              url: String(item.url || item.media_url || ''),
+              permaUrl: String(item.perma_url || ''),
+            }));
+            if (isMounted) setYourTrending(mapped.slice(0, 10));
+          }
+        }
+      } catch (err) {
+        console.error('Failed to load personalized trending:', err);
+      } finally {
+        if (isMounted) setIsLoadingPersonal(false);
+      }
+    }
+    loadYourTrending();
+    return () => {
+      isMounted = false;
+    };
+  }, [selectedLanguages, recentlyPlayed.length]);
+
   return (
-    <div className="space-y-8 pb-24">
-      {/* Quick Discovery Navigation Bar */}
+    <div className="space-y-8 pb-24 animate-in fade-in duration-300">
+      {/* Top Banner & Language Selector */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-3xl p-5 sm:p-6 shadow-xs">
+        <div className="space-y-1">
+          <div className="flex items-center gap-2">
+            <span className="px-2.5 py-0.5 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 text-[10px] font-black uppercase tracking-wider">
+              Free Music Stream
+            </span>
+          </div>
+          <h1 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white tracking-tight">
+            Discover Unlimited Music
+          </h1>
+          <p className="text-xs font-semibold text-slate-500 dark:text-slate-400">
+            Select your preferred languages to personalize your home stream
+          </p>
+        </div>
+
+        <LanguageSelector
+          selectedLanguages={selectedLanguages}
+          onChange={onLanguageChange}
+        />
+      </div>
+
+      {/* Quick Discovery Navigation Grid */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3.5">
         <div
           onClick={() => onTabChange('search')}
@@ -128,49 +203,50 @@ export const HomeView: React.FC<HomeViewProps> = ({
         </div>
       </div>
 
-      {/* TRENDING SONGS SECTION */}
+      {/* YOUR TRENDING (PERSONALIZED) SECTION */}
       <div className="space-y-4">
         <div className="flex items-center justify-between pb-2 border-b border-slate-200/90 dark:border-slate-800">
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-xl bg-amber-500 text-slate-950 flex items-center justify-center font-bold shadow-xs">
-              <Flame className="w-5 h-5 fill-current" />
+            <div className="w-8 h-8 rounded-xl bg-amber-500/10 text-amber-500 flex items-center justify-center font-bold shadow-xs border border-amber-500/30">
+              <UserCheck className="w-5 h-5" />
             </div>
             <div>
-              <h2 className="text-xl font-black text-slate-900 dark:text-white tracking-tight leading-none">
-                TRENDING NOW
+              <h2 className="text-xl font-black text-slate-900 dark:text-white tracking-tight leading-none flex items-center gap-2">
+                <span>YOUR TRENDING</span>
+                <Sparkles className="w-4 h-4 text-amber-500 fill-amber-500/20" />
               </h2>
               <p className="text-[10px] font-bold text-amber-600 dark:text-amber-400 uppercase tracking-wide mt-0.5">
-                Top Charting Hits
+                Personalized Hits ({selectedLanguages.join(', ')})
               </p>
             </div>
           </div>
 
-          {trendingSongs.length > 0 && (
+          {yourTrending.length > 0 && (
             <button
-              onClick={() => onPlayAll(trendingSongs)}
-              className="px-4 py-2 rounded-xl bg-slate-900 dark:bg-amber-500 hover:bg-slate-800 dark:hover:bg-amber-400 text-white dark:text-slate-950 font-bold text-xs shadow-xs transition flex items-center gap-1.5 cursor-pointer"
+              onClick={() => onPlayAll(yourTrending)}
+              className="px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-xs shadow-xs transition flex items-center gap-1.5 cursor-pointer"
             >
-              <Play className="w-3.5 h-3.5 fill-current text-amber-400 dark:text-slate-950" />
+              <Play className="w-3.5 h-3.5 fill-current text-slate-950" />
               <span>Play All</span>
             </button>
           )}
         </div>
 
-        {isLoadingTrending ? (
+        {isLoadingPersonal ? (
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-            {Array.from({ length: 10 }).map((_, idx) => (
-              <div key={idx} className="p-3.5 rounded-2xl bg-white border border-slate-200/80 animate-pulse space-y-3">
-                <div className="aspect-square bg-slate-100 rounded-xl" />
-                <div className="h-4 bg-slate-100 rounded-md w-3/4" />
-                <div className="h-3 bg-slate-100 rounded-md w-1/2" />
+            {Array.from({ length: 5 }).map((_, idx) => (
+              <div key={idx} className="p-3.5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 animate-pulse space-y-3">
+                <div className="aspect-square bg-slate-100 dark:bg-slate-800 rounded-xl" />
+                <div className="h-4 bg-slate-100 dark:bg-slate-800 rounded-md w-3/4" />
+                <div className="h-3 bg-slate-100 dark:bg-slate-800 rounded-md w-1/2" />
               </div>
             ))}
           </div>
-        ) : trendingSongs.length > 0 ? (
+        ) : yourTrending.length > 0 ? (
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-            {trendingSongs.map((song) => (
+            {yourTrending.map((song) => (
               <SongCard
-                key={song.id}
+                key={'yt_' + song.id}
                 song={song}
                 isPlaying={isPlaying}
                 isCurrent={currentSong?.id === song.id}
@@ -185,8 +261,71 @@ export const HomeView: React.FC<HomeViewProps> = ({
             ))}
           </div>
         ) : (
-          <div className="p-8 text-center bg-white rounded-2xl border border-slate-200/90 text-slate-500 text-xs">
-            Unable to load trending songs. Try searching directly!
+          <div className="p-6 text-center bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/90 dark:border-slate-800 text-slate-500 text-xs font-semibold">
+            Select your favorite languages above to get personalized recommendations!
+          </div>
+        )}
+      </div>
+
+      {/* GLOBAL TRENDING SECTION */}
+      <div className="space-y-4">
+        <div className="flex items-center justify-between pb-2 border-b border-slate-200/90 dark:border-slate-800">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-xl bg-amber-500 text-slate-950 flex items-center justify-center font-bold shadow-xs">
+              <Flame className="w-5 h-5 fill-current" />
+            </div>
+            <div>
+              <h2 className="text-xl font-black text-slate-900 dark:text-white tracking-tight leading-none">
+                GLOBAL TRENDING
+              </h2>
+              <p className="text-[10px] font-bold text-amber-600 dark:text-amber-400 uppercase tracking-wide mt-0.5">
+                App-Wide Chart Hits
+              </p>
+            </div>
+          </div>
+
+          {globalTrending.length > 0 && (
+            <button
+              onClick={() => onPlayAll(globalTrending)}
+              className="px-4 py-2 rounded-xl bg-slate-900 dark:bg-amber-500 hover:bg-slate-800 dark:hover:bg-amber-400 text-white dark:text-slate-950 font-bold text-xs shadow-xs transition flex items-center gap-1.5 cursor-pointer"
+            >
+              <Play className="w-3.5 h-3.5 fill-current text-amber-400 dark:text-slate-950" />
+              <span>Play All</span>
+            </button>
+          )}
+        </div>
+
+        {isLoadingGlobal ? (
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+            {Array.from({ length: 10 }).map((_, idx) => (
+              <div key={idx} className="p-3.5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 animate-pulse space-y-3">
+                <div className="aspect-square bg-slate-100 dark:bg-slate-800 rounded-xl" />
+                <div className="h-4 bg-slate-100 dark:bg-slate-800 rounded-md w-3/4" />
+                <div className="h-3 bg-slate-100 dark:bg-slate-800 rounded-md w-1/2" />
+              </div>
+            ))}
+          </div>
+        ) : globalTrending.length > 0 ? (
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+            {globalTrending.map((song) => (
+              <SongCard
+                key={'gt_' + song.id}
+                song={song}
+                isPlaying={isPlaying}
+                isCurrent={currentSong?.id === song.id}
+                isFavorite={favoritesSet.has(song.id)}
+                isDownloaded={downloadedSet.has(song.id)}
+                isDownloading={downloadingSet.has(song.id)}
+                onPlay={onPlaySong}
+                onToggleFavorite={onToggleFavorite}
+                onDownload={onDownloadSong}
+                onAddToQueue={onAddToQueue}
+              />
+            ))}
+          </div>
+        ) : (
+          <div className="p-8 text-center bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/90 dark:border-slate-800 text-slate-500 text-xs">
+            Unable to load global trending songs. Try searching directly!
           </div>
         )}
       </div>
@@ -194,13 +333,13 @@ export const HomeView: React.FC<HomeViewProps> = ({
       {/* RECENTLY PLAYED SECTION */}
       {recentlyPlayed.length > 0 && (
         <div className="space-y-4 pt-2">
-          <div className="flex items-center justify-between pb-2 border-b border-slate-200/90">
-            <h3 className="text-lg font-black text-slate-900 flex items-center gap-2">
-              <Clock className="w-5 h-5 text-amber-600" /> Continue Listening
+          <div className="flex items-center justify-between pb-2 border-b border-slate-200/90 dark:border-slate-800">
+            <h3 className="text-lg font-black text-slate-900 dark:text-white flex items-center gap-2">
+              <Clock className="w-5 h-5 text-amber-600 dark:text-amber-400" /> Continue Listening
             </h3>
             <button
               onClick={() => onTabChange('history')}
-              className="text-xs font-bold text-amber-700 hover:text-amber-800 transition"
+              className="text-xs font-bold text-amber-700 dark:text-amber-400 hover:text-amber-800 transition cursor-pointer"
             >
               View History ({recentlyPlayed.length})
             </button>
