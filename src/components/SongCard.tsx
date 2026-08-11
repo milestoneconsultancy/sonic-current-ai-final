@@ -38,9 +38,9 @@ export const SongCard: React.FC<SongCardProps> = ({
     >
       {/* Artwork Container */}
       <div className="relative aspect-square w-full rounded-xl bg-slate-100 dark:bg-slate-800 overflow-hidden mb-3 shadow-xs">
-        {song.artwork ? (
+        {(song.artwork || song.image) ? (
           <img
-            src={song.artwork}
+            src={song.artwork || song.image}
             alt={song.title}
             className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
             loading="lazy"

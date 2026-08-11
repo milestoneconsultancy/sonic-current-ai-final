@@ -53,9 +53,9 @@ export const SongListItem: React.FC<SongListItemProps> = ({
           onClick={() => onPlay(song)}
           className="relative w-12 h-12 rounded-xl bg-slate-200 dark:bg-slate-800 overflow-hidden shrink-0 shadow-xs cursor-pointer group/art"
         >
-          {song.artwork ? (
+          {(song.artwork || song.image) ? (
             <img
-              src={song.artwork}
+              src={song.artwork || song.image}
               alt={song.title}
               className="w-full h-full object-cover transition-transform duration-300 group-hover/art:scale-110"
               loading="lazy"

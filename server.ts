@@ -856,20 +856,8 @@ app.get(['/result', '/result/', '/api/result', '/api/search', '/api/jiosaavn'], 
         });
       }
 
-      // Ensure distinct artwork for each song in Global Trending
-      const uniqueArtworkList: any[] = [];
-      const seenArtworks = new Set<string>();
-
-      for (const song of finalResults) {
-        const art = song.artwork || song.image;
-        if (!art || !seenArtworks.has(art)) {
-          if (art) seenArtworks.add(art);
-          uniqueArtworkList.push(song);
-        }
-      }
-
       res.setHeader('Cache-Control', 'public, max-age=300, stale-while-revalidate=60');
-      res.json(uniqueArtworkList.length >= 5 ? uniqueArtworkList : finalResults);
+      res.json(finalResults);
     } catch (error) {
       console.error('[Trending API Error]:', error);
       res.json([]);

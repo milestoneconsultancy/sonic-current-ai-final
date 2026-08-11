@@ -3,6 +3,10 @@
   publish = "dist"
   functions = "netlify/functions"
 
+[[edge_functions]]
+  path = "/api/audio"
+  function = "audio"
+
 [[redirects]]
   from = "/api/*"
   to = "/.netlify/functions/api/api/:splat"
