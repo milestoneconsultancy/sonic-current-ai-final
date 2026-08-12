@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Search, Play, Plus, Grid, List, Music2, Sparkles, X, Clock } from 'lucide-react';
+import { Search, Play, Plus, Grid, List, Music2, Sparkles, X, Clock, Mic, MicOff } from 'lucide-react';
 import { Song } from '../types';
 import { SongListItem } from '../components/SongListItem';
 import { SongCard } from '../components/SongCard';
@@ -55,10 +55,68 @@ export const SearchView: React.FC<SearchViewProps> = ({
   const [isLoadingSuggestions, setIsLoadingSuggestions] = useState(false);
   const [selectedIndex, setSelectedIndex] = useState<number>(-1);
   const [showSuggestions, setShowSuggestions] = useState(false);
+  const [isListening, setIsListening] = useState(false);
 
   const inputRef = useRef<HTMLInputElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const sentinelRef = useRef<HTMLDivElement>(null);
+
+  const handleVoiceSearch = () => {
+    const SpeechRecognition =
+      (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+
+    if (!SpeechRecognition) {
+      alert('Voice search is not supported in this browser. Please type your search.');
+      return;
+    }
+
+    try {
+      const recognition = new SpeechRecognition();
+      recognition.lang = 'en-IN'; // Works well for Indian accents, Hindi, Marathi, Hinglish
+      recognition.continuous = false;
+      recognition.interimResults = false;
+
+      recognition.onstart = () => {
+        setIsListening(true);
+      };
+
+      recognition.onend = () => {
+        setIsListening(false);
+      };
+
+      recognition.onerror = (e: any) => {
+        console.warn('Voice search error:', e);
+        setIsListening(false);
+      };
+
+      recognition.onresult = async (event: any) => {
+        const transcript = event.results[0][0].transcript;
+        if (transcript) {
+          setTypedQuery(transcript);
+          try {
+            const res = await fetch('/api/voice-command', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ transcript }),
+            });
+            const parsed = await res.json();
+            if (parsed && parsed.type === 'search' && parsed.query) {
+              onSearchChange(parsed.query);
+            } else {
+              onSearchChange(transcript);
+            }
+          } catch {
+            onSearchChange(transcript);
+          }
+        }
+      };
+
+      recognition.start();
+    } catch (err) {
+      console.error('Failed to start voice recognition:', err);
+      setIsListening(false);
+    }
+  };
 
   // Sync typed query with incoming searchQuery if changed externally
   useEffect(() => {
@@ -222,11 +280,25 @@ export const SearchView: React.FC<SearchViewProps> = ({
             ) : typedQuery ? (
               <button
                 onClick={handleClear}
-                className="mr-3 p-1.5 text-slate-400 hover:text-slate-800 dark:hover:text-white rounded-full hover:bg-slate-200 dark:hover:bg-slate-700 transition cursor-pointer"
+                className="mr-2 p-1.5 text-slate-400 hover:text-slate-800 dark:hover:text-white rounded-full hover:bg-slate-200 dark:hover:bg-slate-700 transition cursor-pointer"
               >
                 <X className="w-5 h-5" />
               </button>
             ) : null}
+
+            {/* Voice Search Button */}
+            <button
+              onClick={handleVoiceSearch}
+              className={`mr-2 p-2.5 rounded-xl transition cursor-pointer flex items-center justify-center ${
+                isListening
+                  ? 'bg-red-500 text-white animate-bounce shadow-md shadow-red-500/30'
+                  : 'bg-amber-500/10 hover:bg-amber-500/20 text-amber-600 dark:text-amber-400 border border-amber-500/20'
+              }`}
+              title={isListening ? 'Listening...' : 'Voice Search'}
+            >
+              <Mic className="w-4 h-4" />
+            </button>
+
             <button
               onClick={() => {
                 if (typedQuery.trim()) {

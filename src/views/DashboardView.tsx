@@ -30,7 +30,7 @@ import {
   AnalyticsSummary,
 } from '../lib/analytics';
 
-const ADMIN_EMAIL = 'khandagalesuraj48@gmail.com';
+const ADMIN_EMAIL = import.meta.env.VITE_ADMIN_EMAIL || '';
 
 interface DashboardViewProps {
   onTabChange?: (tab: any) => void;

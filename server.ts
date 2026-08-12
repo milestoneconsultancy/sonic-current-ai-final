@@ -2,6 +2,21 @@ import express from 'express';
 import path from 'path';
 import CryptoJS from 'crypto-js';
 import { GoogleGenAI } from '@google/genai';
+import { deduplicateSongs, verifyNoDuplicates } from './src/lib/dedupe.js';
+import { getPersistentCache, setPersistentCache } from './src/lib/serverCache.js';
+import { MultiProviderMusicManager } from './src/lib/providers/MusicProvider.js';
+import { PrimaryJioSaavnProvider, SecondaryJioSaavnProvider } from './src/lib/providers/JioSaavnProvider.js';
+import {
+  generateVibeDJPlaylist,
+  generatePersonalizedFeed,
+  generateSmartQueueNext,
+  parseVoiceCommand,
+} from './server/aiFeatures.js';
+
+const musicManager = new MultiProviderMusicManager([
+  new PrimaryJioSaavnProvider(),
+  new SecondaryJioSaavnProvider(),
+]);
 
 interface SearchIntent {
   normalizedQuery: string;
@@ -270,9 +285,9 @@ function getDeterministicSearchIntent(query: string): SearchIntent {
 async function getAISearchIntent(query: string): Promise<SearchIntent> {
   const normKey = query.trim().toLowerCase();
 
-  const cached = aiSearchCache.get(normKey);
-  if (cached && Date.now() - cached.timestamp < 10 * 60 * 1000) {
-    return cached.intent;
+  const cached = await getPersistentCache<SearchIntent>(`intent:${normKey}`);
+  if (cached) {
+    return cached;
   }
 
   const apiKey = process.env.GEMINI_API_KEY;
@@ -351,7 +366,7 @@ Return strictly JSON:
         confidence: typeof parsed.confidence === 'number' ? parsed.confidence : 0.9,
       };
 
-      aiSearchCache.set(normKey, { intent, timestamp: Date.now() });
+      await setPersistentCache(`intent:${normKey}`, intent, 1800);
       return intent;
     }
   } catch (err: any) {
@@ -359,7 +374,7 @@ Return strictly JSON:
   }
 
   const fallbackIntent = getDeterministicSearchIntent(query);
-  aiSearchCache.set(normKey, { intent: fallbackIntent, timestamp: Date.now() });
+  await setPersistentCache(`intent:${normKey}`, fallbackIntent, 1800);
   return fallbackIntent;
 }
 
@@ -670,40 +685,13 @@ function scoreAndRankSongs(rawSongs: any[], query: string, intent: SearchIntent)
 
   scored.sort((a, b) => b.score - a.score);
 
-  const seenIds = new Set<string>();
-  const seenPairs = new Set<string>();
-  const deduplicatedSongs: any[] = [];
+  const songsWithContext = scored.map((item) => ({
+    ...item.song,
+    contextLabel: intent.contextLabel,
+  }));
 
-  for (const item of scored) {
-    const s = item.song;
-    const id = String(s.id || '').trim();
-    
-    // Canonical Title & Artist Normalization for deduplication
-    const normTitle = (s.title || s.song || '')
-      .toLowerCase()
-      .replace(/\s*[\(\[\{].*?[\)\]\}]/g, '')
-      .replace(/[^a-z0-9]/g, '')
-      .trim();
-    const primaryArtist = (s.artist || s.singers || '')
-      .toLowerCase()
-      .split(/,|&|\band\b|\bft\b|\bfeat\b/i)[0]
-      .replace(/[^a-z0-9]/g, '')
-      .trim();
-    const pairKey = `${normTitle}::${primaryArtist}`;
-
-    if (id && seenIds.has(id)) continue;
-    if (pairKey.length > 4 && seenPairs.has(pairKey)) continue;
-
-    if (id) seenIds.add(id);
-    if (pairKey.length > 4) seenPairs.add(pairKey);
-
-    deduplicatedSongs.push({
-      ...s,
-      contextLabel: intent.contextLabel,
-    });
-  }
-
-  return deduplicatedSongs;
+  const { uniqueSongs } = deduplicateSongs(songsWithContext);
+  return uniqueSongs;
 }
 
 export const app = express();
@@ -775,9 +763,9 @@ app.get(['/result', '/result/', '/api/result', '/api/search', '/api/jiosaavn'], 
 
       let allSongs: any[] = [];
       for (const tq of searchQueriesWithLang.slice(0, 6)) {
-        const resList = await searchSongsJioSaavn(tq, pageParam);
-        if (resList.length > 0) {
-          allSongs.push(...resList);
+        const { songs } = await musicManager.search(tq, pageParam);
+        if (songs.length > 0) {
+          allSongs.push(...songs);
         }
       }
 
@@ -792,14 +780,15 @@ app.get(['/result', '/result/', '/api/result', '/api/search', '/api/jiosaavn'], 
           intent.intent === 'combination')
       ) {
         const primaryQuery = searchQueriesWithLang[0] || query;
-        const page2List = await searchSongsJioSaavn(primaryQuery, 2);
+        const { songs: page2List } = await musicManager.search(primaryQuery, 2);
         if (page2List.length > 0) {
           allSongs.push(...page2List);
         }
       }
 
       if (allSongs.length === 0) {
-        allSongs = await searchSongsJioSaavn(query, pageParam);
+        const { songs: fallbackSongs } = await musicManager.search(query, pageParam);
+        allSongs = fallbackSongs;
       }
 
       const deduplicatedSongs = scoreAndRankSongs(allSongs, query, intent);
@@ -832,29 +821,37 @@ app.get(['/result', '/result/', '/api/result', '/api/search', '/api/jiosaavn'], 
     }
   });
 
-  // 1c. Trending Songs Endpoint with Language Filter
+  // 1c. Trending Songs Endpoint with Language Filter, Provider Failover & Deduplication
   app.get(['/api/trending', '/trending'], async (req, res) => {
     try {
       const languagesParam = (req.query.languages as string || '').trim();
-      let trendQuery = 'latest trending indian hits';
       let allowedLangs: string[] = [];
 
       if (languagesParam && !languagesParam.toLowerCase().includes('all indian languages')) {
         allowedLangs = languagesParam.split(',').map(l => l.trim().toLowerCase()).filter(Boolean);
-        if (allowedLangs.length > 0) {
-          trendQuery = `latest ${allowedLangs.join(' ')} hits`;
-        }
       }
 
-      const results = await searchSongsJioSaavn(trendQuery, 1);
-      let finalResults = results;
+      const cacheKey = `trending:${allowedLangs.join('_') || 'all'}`;
+      const cached = await getPersistentCache<any[]>(cacheKey);
+      if (cached && Array.isArray(cached) && cached.length > 0) {
+        res.setHeader('Cache-Control', 'public, max-age=300, stale-while-revalidate=60');
+        res.json(cached);
+        return;
+      }
+
+      const { songs } = await musicManager.getTrending(allowedLangs);
+      const { uniqueSongs } = deduplicateSongs(songs);
+
+      let finalResults = uniqueSongs;
       if (allowedLangs.length > 0) {
-        finalResults = results.filter(s => {
+        finalResults = uniqueSongs.filter(s => {
           const sLang = (s.language || '').toLowerCase().trim();
           if (!sLang) return true;
           return allowedLangs.some(al => sLang.includes(al) || al.includes(sLang));
         });
       }
+
+      await setPersistentCache(cacheKey, finalResults, 600);
 
       res.setHeader('Cache-Control', 'public, max-age=300, stale-while-revalidate=60');
       res.json(finalResults);
@@ -878,10 +875,12 @@ app.get(['/result', '/result/', '/api/result', '/api/search', '/api/jiosaavn'], 
         allowedLangs = languagesParam.split(',').map(l => l.trim().toLowerCase()).filter(Boolean);
       }
 
-      const results = await searchSongsJioSaavn(query.trim(), 1);
-      let filtered = results;
+      const { songs } = await musicManager.search(query.trim(), 1);
+      const { uniqueSongs } = deduplicateSongs(songs);
+
+      let filtered = uniqueSongs;
       if (allowedLangs.length > 0) {
-        filtered = results.filter(s => {
+        filtered = uniqueSongs.filter(s => {
           const sLang = (s.language || '').toLowerCase().trim();
           if (!sLang) return true;
           return allowedLangs.some(al => sLang.includes(al) || al.includes(sLang));
@@ -892,6 +891,72 @@ app.get(['/result', '/result/', '/api/result', '/api/search', '/api/jiosaavn'], 
     } catch (error) {
       console.error('[Suggestions API Error]:', error);
       res.json([]);
+    }
+  });
+
+  // 1d. AI Vibe DJ Playlist Endpoint
+  app.post(['/api/vibe-dj', '/vibe-dj'], async (req, res) => {
+    try {
+      const { prompt, languages } = req.body || {};
+      if (!prompt || typeof prompt !== 'string' || !prompt.trim()) {
+        res.status(400).json({ error: 'Missing prompt parameter' });
+        return;
+      }
+      const playlist = await generateVibeDJPlaylist(
+        prompt,
+        Array.isArray(languages) ? languages : ['Hindi']
+      );
+      res.json(playlist);
+    } catch (error) {
+      console.error('[Vibe DJ API Error]:', error);
+      res.status(500).json({ error: 'Failed to generate Vibe DJ playlist' });
+    }
+  });
+
+  // 1e. AI Personalized Feed Endpoint
+  app.post(['/api/personalized-feed', '/personalized-feed'], async (req, res) => {
+    try {
+      const { recentHistory, languages } = req.body || {};
+      const historyList = Array.isArray(recentHistory) ? recentHistory : [];
+      const userLangs = Array.isArray(languages) ? languages : ['Hindi'];
+      const feed = await generatePersonalizedFeed(historyList, userLangs);
+      res.json(feed);
+    } catch (error) {
+      console.error('[Personalized Feed API Error]:', error);
+      res.status(500).json({ error: 'Failed to generate personalized feed' });
+    }
+  });
+
+  // 1f. AI Smart Queue / Autoplay Endpoint
+  app.post(['/api/smart-queue', '/smart-queue'], async (req, res) => {
+    try {
+      const { currentSong, recentSongs, playedIds, languages } = req.body || {};
+      const nextSongs = await generateSmartQueueNext(
+        currentSong,
+        Array.isArray(recentSongs) ? recentSongs : [],
+        Array.isArray(playedIds) ? playedIds : [],
+        Array.isArray(languages) ? languages : ['Hindi']
+      );
+      res.json(nextSongs);
+    } catch (error) {
+      console.error('[Smart Queue API Error]:', error);
+      res.status(500).json({ error: 'Failed to generate smart queue suggestions' });
+    }
+  });
+
+  // 1g. Voice Command Parser Endpoint
+  app.post(['/api/voice-command', '/voice-command'], async (req, res) => {
+    try {
+      const { transcript } = req.body || {};
+      if (!transcript || typeof transcript !== 'string') {
+        res.status(400).json({ error: 'Missing transcript' });
+        return;
+      }
+      const parsed = await parseVoiceCommand(transcript);
+      res.json(parsed);
+    } catch (error) {
+      console.error('[Voice Command API Error]:', error);
+      res.status(500).json({ error: 'Failed to parse voice command' });
     }
   });
 

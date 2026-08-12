@@ -4,6 +4,7 @@ import { Song, TabType, RecentlyPlayedItem } from '../types';
 import { SongCard } from '../components/SongCard';
 import { SongListItem } from '../components/SongListItem';
 import { LanguageSelector } from '../components/LanguageSelector';
+import { VibeDJSection } from '../components/VibeDJSection';
 
 interface HomeViewProps {
   onTabChange: (tab: TabType) => void;
@@ -40,8 +41,65 @@ export const HomeView: React.FC<HomeViewProps> = ({
 }) => {
   const [globalTrending, setGlobalTrending] = useState<Song[]>([]);
   const [yourTrending, setYourTrending] = useState<Song[]>([]);
+  const [aiSections, setAiSections] = useState<
+    { title: string; reason: string; songs: Song[] }[]
+  >([]);
   const [isLoadingGlobal, setIsLoadingGlobal] = useState<boolean>(true);
   const [isLoadingPersonal, setIsLoadingPersonal] = useState<boolean>(true);
+
+  // Load AI Personalized Sections
+  useEffect(() => {
+    let isMounted = true;
+    async function loadAIPersonalizedFeed() {
+      if (recentlyPlayed.length === 0) return;
+      try {
+        const historyData = recentlyPlayed.slice(0, 5).map((item) => ({
+          title: item.song.title,
+          song: item.song.title,
+          artist: item.song.artist,
+          language: item.song.language,
+        }));
+
+        const response = await fetch('/api/personalized-feed', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            recentHistory: historyData,
+            languages: selectedLanguages,
+          }),
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          if (Array.isArray(data) && data.length > 0) {
+            const mappedSections = data.map((sec: any) => ({
+              title: sec.title || 'Recommended For You',
+              reason: sec.reason || '',
+              songs: (Array.isArray(sec.songs) ? sec.songs : []).map((s: any) => ({
+                id: String(s.id || ''),
+                title: String(s.title || s.song || 'Unknown Title'),
+                artist: String(s.artist || s.singers || 'Unknown Artist'),
+                album: String(s.album || ''),
+                duration: String(s.duration || '0'),
+                artwork: String(s.artwork || s.image || ''),
+                url: String(s.url || s.media_url || ''),
+                permaUrl: String(s.perma_url || ''),
+                whyPicked: s.whyPicked,
+              })),
+            }));
+            if (isMounted) setAiSections(mappedSections);
+          }
+        }
+      } catch (err) {
+        console.warn('Failed to fetch AI personalized feed:', err);
+      }
+    }
+
+    loadAIPersonalizedFeed();
+    return () => {
+      isMounted = false;
+    };
+  }, [recentlyPlayed.length, selectedLanguages]);
 
   // Load Global Trending
   useEffect(() => {
@@ -149,6 +207,14 @@ export const HomeView: React.FC<HomeViewProps> = ({
           onChange={onLanguageChange}
         />
       </div>
+
+      {/* AI VIBE DJ SECTION */}
+      <VibeDJSection
+        selectedLanguages={selectedLanguages}
+        onPlaySong={onPlaySong}
+        onPlayAll={onPlayAll}
+        onAddToQueue={onAddToQueue}
+      />
 
       {/* Quick Discovery Navigation Grid */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3.5">
@@ -268,6 +334,55 @@ export const HomeView: React.FC<HomeViewProps> = ({
           </div>
         )}
       </div>
+
+      {/* AI PERSONALIZED MIX SECTIONS */}
+      {aiSections.map((sec, secIdx) => (
+        <div key={`ai_sec_${secIdx}`} className="space-y-4">
+          <div className="flex items-center justify-between pb-2 border-b border-slate-200/90 dark:border-slate-800">
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-xl bg-purple-500/10 text-purple-500 flex items-center justify-center font-bold shadow-xs border border-purple-500/30">
+                <Sparkles className="w-5 h-5 fill-current" />
+              </div>
+              <div>
+                <h2 className="text-xl font-black text-slate-900 dark:text-white tracking-tight leading-none flex items-center gap-2">
+                  <span>{sec.title}</span>
+                </h2>
+                <p className="text-[10px] font-bold text-purple-600 dark:text-purple-400 uppercase tracking-wide mt-0.5">
+                  {sec.reason || 'AI Smart Recommendation'}
+                </p>
+              </div>
+            </div>
+
+            {sec.songs.length > 0 && (
+              <button
+                onClick={() => onPlayAll(sec.songs)}
+                className="px-4 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs shadow-xs transition flex items-center gap-1.5 cursor-pointer"
+              >
+                <Play className="w-3.5 h-3.5 fill-current" />
+                <span>Play Mix</span>
+              </button>
+            )}
+          </div>
+
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+            {sec.songs.map((song) => (
+              <SongCard
+                key={'ai_song_' + song.id}
+                song={song}
+                isPlaying={isPlaying}
+                isCurrent={currentSong?.id === song.id}
+                isFavorite={favoritesSet.has(song.id)}
+                isDownloaded={downloadedSet.has(song.id)}
+                isDownloading={downloadingSet.has(song.id)}
+                onPlay={onPlaySong}
+                onToggleFavorite={onToggleFavorite}
+                onDownload={onDownloadSong}
+                onAddToQueue={onAddToQueue}
+              />
+            ))}
+          </div>
+        </div>
+      ))}
 
       {/* GLOBAL TRENDING SECTION */}
       <div className="space-y-4">

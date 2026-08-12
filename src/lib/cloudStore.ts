@@ -12,13 +12,28 @@ import {
   serverTimestamp,
   writeBatch,
 } from 'firebase/firestore';
-import { db } from './firebase';
+import { db, markFirestoreDisabled, isFirestoreDisabled as checkIsDisabled } from './firebase';
 import { Song, Playlist, PlaylistTrack, SearchHistoryItem, RecentlyPlayedItem, DownloadedSong } from '../types';
+
+function checkFirestoreErr(err: any) {
+  const msg = String(err?.message || err || '');
+  const code = String(err?.code || '');
+  if (
+    msg.includes('PERMISSION_DENIED') ||
+    msg.includes('permission-denied') ||
+    msg.includes('disabled') ||
+    msg.includes('offline') ||
+    code.includes('permission-denied')
+  ) {
+    markFirestoreDisabled();
+  }
+}
 
 // ==========================================
 // USER PROFILE
 // ==========================================
 export async function syncUserProfile(uid: string, email: string, displayName?: string) {
+  if (checkIsDisabled()) return;
   try {
     const userRef = doc(db, 'users', uid);
     const snap = await getDoc(userRef);
@@ -38,7 +53,7 @@ export async function syncUserProfile(uid: string, email: string, displayName?: 
       });
     }
   } catch (err) {
-    console.error('Error syncing user profile:', err);
+    checkFirestoreErr(err);
   }
 }
 
@@ -46,6 +61,7 @@ export async function syncUserProfile(uid: string, email: string, displayName?: 
 // FAVORITES
 // ==========================================
 export async function getCloudFavorites(uid: string): Promise<Song[]> {
+  if (checkIsDisabled()) return [];
   try {
     const favRef = collection(db, 'users', uid, 'favorites');
     const q = query(favRef, orderBy('createdAt', 'desc'));
@@ -64,12 +80,13 @@ export async function getCloudFavorites(uid: string): Promise<Song[]> {
       };
     });
   } catch (err) {
-    console.error('Error fetching cloud favorites:', err);
+    checkFirestoreErr(err);
     return [];
   }
 }
 
 export async function addCloudFavorite(uid: string, song: Song): Promise<void> {
+  if (checkIsDisabled()) return;
   try {
     const favRef = doc(db, 'users', uid, 'favorites', song.id);
     await setDoc(favRef, {
@@ -84,16 +101,17 @@ export async function addCloudFavorite(uid: string, song: Song): Promise<void> {
       createdAt: new Date().toISOString(),
     });
   } catch (err) {
-    console.error('Error adding cloud favorite:', err);
+    checkFirestoreErr(err);
   }
 }
 
 export async function removeCloudFavorite(uid: string, songId: string): Promise<void> {
+  if (checkIsDisabled()) return;
   try {
     const favRef = doc(db, 'users', uid, 'favorites', songId);
     await deleteDoc(favRef);
   } catch (err) {
-    console.error('Error removing cloud favorite:', err);
+    checkFirestoreErr(err);
   }
 }
 
@@ -101,6 +119,7 @@ export async function removeCloudFavorite(uid: string, songId: string): Promise<
 // SEARCH HISTORY
 // ==========================================
 export async function getCloudSearchHistory(uid: string): Promise<SearchHistoryItem[]> {
+  if (checkIsDisabled()) return [];
   try {
     const ref = collection(db, 'users', uid, 'search_history');
     const q = query(ref, orderBy('lastSearchedAt', 'desc'), limit(20));
@@ -114,13 +133,13 @@ export async function getCloudSearchHistory(uid: string): Promise<SearchHistoryI
       };
     });
   } catch (err) {
-    console.error('Error fetching search history:', err);
+    checkFirestoreErr(err);
     return [];
   }
 }
 
 export async function addCloudSearchHistory(uid: string, searchQuery: string): Promise<void> {
-  if (!searchQuery.trim()) return;
+  if (checkIsDisabled() || !searchQuery.trim()) return;
   try {
     const cleanQuery = searchQuery.trim();
     // Document ID based on slugified query to prevent duplicates easily
@@ -141,15 +160,16 @@ export async function addCloudSearchHistory(uid: string, searchQuery: string): P
       });
     }
   } catch (err) {
-    console.error('Error adding search history:', err);
+    checkFirestoreErr(err);
   }
 }
 
 export async function removeCloudSearchHistoryItem(uid: string, docId: string): Promise<void> {
+  if (checkIsDisabled()) return;
   try {
     await deleteDoc(doc(db, 'users', uid, 'search_history', docId));
   } catch (err) {
-    console.error('Error deleting search history item:', err);
+    checkFirestoreErr(err);
   }
 }
 
@@ -157,6 +177,7 @@ export async function removeCloudSearchHistoryItem(uid: string, docId: string): 
 // PLAY HISTORY
 // ==========================================
 export async function getCloudPlayHistory(uid: string): Promise<RecentlyPlayedItem[]> {
+  if (checkIsDisabled()) return [];
   try {
     const ref = collection(db, 'users', uid, 'play_history');
     const q = query(ref, orderBy('playedAt', 'desc'), limit(30));
@@ -179,12 +200,13 @@ export async function getCloudPlayHistory(uid: string): Promise<RecentlyPlayedIt
       };
     });
   } catch (err) {
-    console.error('Error fetching play history:', err);
+    checkFirestoreErr(err);
     return [];
   }
 }
 
 export async function addCloudPlayHistory(uid: string, song: Song): Promise<void> {
+  if (checkIsDisabled()) return;
   try {
     const ref = doc(db, 'users', uid, 'play_history', song.id);
     await setDoc(ref, {
@@ -199,7 +221,7 @@ export async function addCloudPlayHistory(uid: string, song: Song): Promise<void
       playedAt: new Date().toISOString(),
     });
   } catch (err) {
-    console.error('Error adding play history:', err);
+    checkFirestoreErr(err);
   }
 }
 
@@ -207,6 +229,7 @@ export async function addCloudPlayHistory(uid: string, song: Song): Promise<void
 // PLAYLISTS
 // ==========================================
 export async function getCloudPlaylists(uid: string): Promise<Playlist[]> {
+  if (checkIsDisabled()) return [];
   try {
     const ref = collection(db, 'users', uid, 'playlists');
     const q = query(ref, orderBy('createdAt', 'desc'));
@@ -224,12 +247,13 @@ export async function getCloudPlaylists(uid: string): Promise<Playlist[]> {
       };
     });
   } catch (err) {
-    console.error('Error fetching playlists:', err);
+    checkFirestoreErr(err);
     return [];
   }
 }
 
 export async function createCloudPlaylist(uid: string, name: string, description?: string): Promise<Playlist | null> {
+  if (checkIsDisabled()) return null;
   try {
     const newRef = doc(collection(db, 'users', uid, 'playlists'));
     const now = new Date().toISOString();
@@ -251,20 +275,22 @@ export async function createCloudPlaylist(uid: string, name: string, description
     });
     return playlistData;
   } catch (err) {
-    console.error('Error creating playlist:', err);
+    checkFirestoreErr(err);
     return null;
   }
 }
 
 export async function deleteCloudPlaylist(uid: string, playlistId: string): Promise<void> {
+  if (checkIsDisabled()) return;
   try {
     await deleteDoc(doc(db, 'users', uid, 'playlists', playlistId));
   } catch (err) {
-    console.error('Error deleting playlist:', err);
+    checkFirestoreErr(err);
   }
 }
 
 export async function getCloudPlaylistTracks(uid: string, playlistId: string): Promise<PlaylistTrack[]> {
+  if (checkIsDisabled()) return [];
   try {
     const ref = collection(db, 'users', uid, 'playlists', playlistId, 'tracks');
     const q = query(ref, orderBy('position', 'asc'));
@@ -285,12 +311,13 @@ export async function getCloudPlaylistTracks(uid: string, playlistId: string): P
       };
     });
   } catch (err) {
-    console.error('Error fetching playlist tracks:', err);
+    checkFirestoreErr(err);
     return [];
   }
 }
 
 export async function addSongToCloudPlaylist(uid: string, playlistId: string, song: Song): Promise<void> {
+  if (checkIsDisabled()) return;
   try {
     const tracksRef = collection(db, 'users', uid, 'playlists', playlistId, 'tracks');
     const tracksSnap = await getDocs(tracksRef);
@@ -315,11 +342,12 @@ export async function addSongToCloudPlaylist(uid: string, playlistId: string, so
       updatedAt: new Date().toISOString(),
     });
   } catch (err) {
-    console.error('Error adding song to playlist:', err);
+    checkFirestoreErr(err);
   }
 }
 
 export async function removeSongFromCloudPlaylist(uid: string, playlistId: string, songId: string): Promise<void> {
+  if (checkIsDisabled()) return;
   try {
     await deleteDoc(doc(db, 'users', uid, 'playlists', playlistId, 'tracks', songId));
     const tracksSnap = await getDocs(collection(db, 'users', uid, 'playlists', playlistId, 'tracks'));
@@ -328,7 +356,7 @@ export async function removeSongFromCloudPlaylist(uid: string, playlistId: strin
       updatedAt: new Date().toISOString(),
     });
   } catch (err) {
-    console.error('Error removing song from playlist:', err);
+    checkFirestoreErr(err);
   }
 }
 
@@ -336,6 +364,7 @@ export async function removeSongFromCloudPlaylist(uid: string, playlistId: strin
 // DOWNLOAD METADATA (Sync metadata to cloud)
 // ==========================================
 export async function syncCloudDownloadMetadata(uid: string, songs: DownloadedSong[]): Promise<void> {
+  if (checkIsDisabled()) return;
   try {
     const batch = writeBatch(db);
     songs.forEach((song) => {
@@ -352,7 +381,7 @@ export async function syncCloudDownloadMetadata(uid: string, songs: DownloadedSo
     });
     await batch.commit();
   } catch (err) {
-    console.error('Error syncing download metadata:', err);
+    checkFirestoreErr(err);
   }
 }
 
@@ -366,6 +395,7 @@ export async function migrateLocalDataToCloud(
   localPlayed: RecentlyPlayedItem[],
   localDownloads: DownloadedSong[]
 ): Promise<void> {
+  if (checkIsDisabled()) return;
   try {
     const batch = writeBatch(db);
 
@@ -444,6 +474,6 @@ export async function migrateLocalDataToCloud(
 
     await batch.commit();
   } catch (err) {
-    console.error('Failed to migrate local data to cloud:', err);
+    checkFirestoreErr(err);
   }
 }

@@ -18,7 +18,7 @@ import {
   increment,
   writeBatch,
 } from 'firebase/firestore';
-import { rtdb, db, auth } from './firebase';
+import { rtdb, db, auth, markFirestoreDisabled, isFirestoreDisabled as checkIsDisabled } from './firebase';
 import { Song } from '../types';
 
 // ==========================================
@@ -89,6 +89,20 @@ export function subscribeToActiveUsers(callback: (count: number, users: any[]) =
 // ==========================================
 // VISIT & EVENT ANALYTICS (FIRESTORE)
 // ==========================================
+function checkFirestoreErr(err: any) {
+  const msg = String(err?.message || err || '');
+  const code = String(err?.code || '');
+  if (
+    msg.includes('PERMISSION_DENIED') ||
+    msg.includes('permission-denied') ||
+    msg.includes('disabled') ||
+    msg.includes('offline') ||
+    code.includes('permission-denied')
+  ) {
+    markFirestoreDisabled();
+  }
+}
+
 function getTodayDateStr(): string {
   const d = new Date();
   return d.toISOString().split('T')[0];
@@ -103,6 +117,7 @@ export async function trackEvent(
     page?: string;
   }
 ) {
+  if (checkIsDisabled()) return;
   try {
     const today = getTodayDateStr();
     const sessionId = getSessionId();
@@ -148,7 +163,7 @@ export async function trackEvent(
       page: data.page || null,
     });
   } catch (err) {
-    console.warn('Track event warning:', err);
+    checkFirestoreErr(err);
   }
 }
 
@@ -189,6 +204,8 @@ export async function fetchAnalyticsSummary(
     popularLanguages: [],
     recentActivity: [],
   };
+
+  if (checkIsDisabled()) return result;
 
   try {
     const today = new Date();
@@ -323,7 +340,7 @@ export async function fetchAnalyticsSummary(
     result.recentActivity = recentActs;
 
   } catch (err) {
-    console.error('Error fetching analytics summary:', err);
+    checkFirestoreErr(err);
   }
 
   return result;

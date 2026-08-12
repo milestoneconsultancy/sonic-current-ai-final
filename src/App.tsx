@@ -73,7 +73,8 @@ export default function App() {
     const unsub = onAuthStateChanged(auth, (user) => setAuthUser(user));
     return () => unsub();
   }, []);
-  const isAdmin = authUser?.email?.toLowerCase() === 'khandagalesuraj48@gmail.com';
+  const adminEmail = (import.meta.env.VITE_ADMIN_EMAIL || '').trim().toLowerCase();
+  const isAdmin = Boolean(adminEmail && authUser?.email?.toLowerCase() === adminEmail);
 
   // Keep route in sync with currentTab
   useEffect(() => {
@@ -842,13 +843,64 @@ export default function App() {
       return;
     }
 
-    // 5. SMART CONTEXT AUTO-EXTEND QUEUE: Fetch related tracks using song context!
+    // 5. SMART CONTEXT AUTO-EXTEND QUEUE: Use AI Smart Queue endpoint first, fallback to context search
     if (!navigator.onLine) {
       setIsPlaying(false);
       return;
     }
 
     try {
+      // 5a. Call AI Smart Queue Endpoint
+      const playedIds = curQueue.map((s) => s.id).filter(Boolean);
+      const recentList = curQueue.slice(-5).map((s) => ({ title: s.title, artist: s.artist }));
+
+      const sqRes = await fetch('/api/smart-queue', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          currentSong: current,
+          recentSongs: recentList,
+          playedIds,
+          languages: selectedLanguages,
+        }),
+      });
+
+      if (sqRes.ok) {
+        const sqData = await sqRes.json();
+        if (Array.isArray(sqData) && sqData.length > 0) {
+          const aiSongs: Song[] = sqData.map((item: any) => ({
+            id: String(item.id || ''),
+            title: String(item.title || item.song || 'Unknown Title'),
+            artist: String(item.artist || item.singers || 'Unknown Artist'),
+            album: String(item.album || ''),
+            duration: String(item.duration || '0'),
+            artwork: String(item.artwork || item.image || ''),
+            url: String(item.url || item.media_url || ''),
+            permaUrl: String(item.perma_url || ''),
+            whyPicked: item.whyPicked,
+          }));
+
+          const existingSeen = {
+            ids: new Set<string>(curQueue.map((s) => s.id).filter(Boolean)),
+            pairs: new Set<string>(
+              curQueue.map((s) => getCanonicalSongKey(s).pairKey).filter((p) => p.length > 4)
+            ),
+          };
+
+          const { uniqueSongs } = deduplicateSongs(aiSongs, existingSeen);
+          if (uniqueSongs.length > 0) {
+            const nextSong = uniqueSongs[0];
+            const newQueue = [...curQueue, ...uniqueSongs];
+            setQueue(newQueue);
+            const newIndex = curQueue.length;
+            setQueueIndex(newIndex);
+            handlePlaySong(nextSong, newIndex, true);
+            return;
+          }
+        }
+      }
+
+      // 5b. Fallback to Context Search
       const contextTerm = contextQuery || current.artist || current.title;
       if (contextTerm) {
         let page = Math.floor(curQueue.length / 10) + 1;
