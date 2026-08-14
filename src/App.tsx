@@ -50,7 +50,7 @@ import { HistoryView } from './views/HistoryView';
 import { FavoritesView } from './views/FavoritesView';
 import { DownloadsView } from './views/DownloadsView';
 import { DashboardView } from './views/DashboardView';
-import { DownloadOptionsModal } from './components/DownloadOptionsModal';
+import { ToastNotification, ToastData } from './components/ToastNotification';
 import { WrongLanguageAlertModal } from './components/WrongLanguageAlertModal';
 import { initRealtimePresence, trackEvent } from './lib/analytics';
 import { auth } from './lib/firebase';
@@ -1073,152 +1073,13 @@ export default function App() {
     trackEvent('like', { song });
   };
 
-  // Download Options Modal State
-  const [modalSongForDownload, setModalSongForDownload] = useState<Song | null>(null);
+  // In-App Offline Download & Toast State
+  const [toast, setToast] = useState<ToastData | null>(null);
 
-  const handleTriggerDownloadModal = (song: Song) => {
-    setModalSongForDownload(song);
-  };
-
-  const handleSaveToAppLibrary = async (song: Song) => {
-    await handleDownloadSong(song);
-  };
-
-  const handleSaveDevice = async (
-    song: Song,
-    onProgress: (pct: number) => void
-  ): Promise<boolean> => {
-    trackEvent('download', { song });
-    onProgress(10);
-
-    const cleanTitle = song.title.replace(/[^a-zA-Z0-9\s-_]/g, '');
-    const cleanArtist = song.artist.replace(/[^a-zA-Z0-9\s-_]/g, '');
-    const fileName = `${cleanArtist || 'Artist'} - ${cleanTitle || 'Song'}.mp3`;
-
-    console.log(`[DEVICE] Initiating device download for: "${fileName}"`);
-
-    // Fetch verified audio blob
-    const { blob: audioBlob, size } = await fetchAudioBlob(song.url, fileName);
-    onProgress(60);
-
-    console.log(`[DEVICE] Audio Blob verified successfully (${size} bytes)`);
-
-    // Check Capacitor Native filesystem / MediaStore
-    const isCapacitor = typeof (window as any).Capacitor !== 'undefined';
-    if (isCapacitor) {
-      try {
-        const { registerPlugin } = await import('@capacitor/core');
-        const MediaStoreSaver = registerPlugin<any>('MediaStoreSaver');
-
-        const reader = new FileReader();
-        const base64Data = await new Promise<string>((resolve, reject) => {
-          reader.onloadend = () => {
-            const res = reader.result as string;
-            const base64 = res.includes(',') ? res.split(',')[1] : res;
-            resolve(base64);
-          };
-          reader.onerror = reject;
-          reader.readAsDataURL(audioBlob);
-        });
-
-        // Try native MediaStore save to public Downloads
-        try {
-          const res = await MediaStoreSaver.saveToDownloads({
-            fileName,
-            mimeType: 'audio/mpeg',
-            base64Data,
-          });
-
-          if (res && res.uri && res.size > 0) {
-            console.log(
-              `[DEVICE] MediaStore public Downloads save verified: ${res.uri} (${res.size} bytes)`
-            );
-            onProgress(100);
-            return true;
-          }
-        } catch (mediaStoreErr) {
-          console.warn('[DEVICE] MediaStore plugin save failed, trying Filesystem fallback:', mediaStoreErr);
-        }
-
-        // Fallback: Capacitor Filesystem
-        const { Filesystem, Directory } = await import('@capacitor/filesystem');
-        try {
-          const perm = await Filesystem.checkPermissions();
-          if (perm.publicStorage !== 'granted') {
-            await Filesystem.requestPermissions();
-          }
-        } catch (permErr) {
-          console.warn('[DEVICE] Permission check warning:', permErr);
-        }
-
-        let targetDirectory = Directory.ExternalStorage;
-        let targetPath = `Download/${fileName}`;
-        let writeSuccess = false;
-
-        try {
-          await Filesystem.writeFile({
-            path: targetPath,
-            data: base64Data,
-            directory: targetDirectory,
-            recursive: true,
-          });
-          writeSuccess = true;
-        } catch (e1) {
-          console.warn('[DEVICE] Failed writing to ExternalStorage/Download, trying Documents:', e1);
-          targetDirectory = Directory.Documents;
-          targetPath = fileName;
-          await Filesystem.writeFile({
-            path: targetPath,
-            data: base64Data,
-            directory: targetDirectory,
-            recursive: true,
-          });
-          writeSuccess = true;
-        }
-
-        if (writeSuccess) {
-          const stat = await Filesystem.stat({
-            path: targetPath,
-            directory: targetDirectory,
-          });
-
-          if (!stat || stat.size === 0) {
-            throw new Error('Capacitor native file write failed: Output file size on disk is 0.');
-          }
-
-          console.log(
-            `[DEVICE] Capacitor native file write verified at ${targetPath} (${stat.size} bytes on disk)`
-          );
-          onProgress(100);
-          return true;
-        }
-      } catch (capErr: any) {
-        console.warn('[DEVICE] Capacitor native save error, falling back to browser download:', capErr?.message || capErr);
-      }
-    }
-
-    // Standard Browser Download via Blob URL
-    onProgress(85);
-    const blobUrl = URL.createObjectURL(audioBlob);
-    const a = document.createElement('a');
-    a.href = blobUrl;
-    a.download = fileName;
-    a.style.display = 'none';
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-
-    setTimeout(() => {
-      URL.revokeObjectURL(blobUrl);
-    }, 15000);
-
-    onProgress(100);
-    return true;
-  };
-
-  // Download Management (IndexedDB App Offline Library)
+  // In-App Offline Download Management (IndexedDB Superfast Audio Storage)
   const handleDownloadSong = async (song: Song) => {
     trackEvent('download', { song });
+
     const isAlreadyDownloaded = downloadedSongs.some((d) => {
       if (d.id === song.id) return true;
       const t1 = d.title.trim().toLowerCase();
@@ -1228,23 +1089,52 @@ export default function App() {
       return t1 === t2 && a1 === a2 && t1.length > 2;
     });
 
-    if (isAlreadyDownloaded || downloadingSet.has(song.id)) return;
+    if (isAlreadyDownloaded) {
+      setToast({
+        id: `toast-${Date.now()}`,
+        type: 'done',
+        title: 'Already Saved Offline',
+        message: `"${song.title}" is in your In-App Offline Deck`,
+        song,
+        actionText: 'View Deck',
+        onAction: () => setCurrentTab('downloads'),
+      });
+      return;
+    }
+
+    if (downloadingSet.has(song.id)) {
+      setToast({
+        id: `toast-${Date.now()}`,
+        type: 'saving',
+        title: 'Saving Offline...',
+        message: `Downloading "${song.title}" into app memory`,
+        song,
+      });
+      return;
+    }
 
     setDownloadingSet((prev) => new Set(prev).add(song.id));
+    setToast({
+      id: `toast-${Date.now()}`,
+      type: 'saving',
+      title: 'Saving Offline ⚡',
+      message: `Fetching audio stream for "${song.title}"...`,
+      song,
+    });
 
     try {
       const cleanTitle = song.title.replace(/[^a-zA-Z0-9\s-_]/g, '');
       const cleanArtist = song.artist.replace(/[^a-zA-Z0-9\s-_]/g, '');
       const fileName = `${cleanArtist || 'Artist'} - ${cleanTitle || 'Song'}.mp3`;
 
-      console.log(`[OFFLINE] Starting App Library download for "${song.title}"`);
+      console.log(`[OFFLINE] Starting Superfast In-App download for "${song.title}"`);
       const { blob: audioBlob } = await fetchAudioBlob(song.url, fileName);
 
-      // Convert artwork to data URL for offline display if remote
+      // Fast artwork caching (non-blocking fallback)
       let offlineArtwork = song.artwork;
       if (song.artwork && (song.artwork.startsWith('http://') || song.artwork.startsWith('https://'))) {
         try {
-          const artRes = await fetch(song.artwork);
+          const artRes = await fetch(song.artwork, { mode: 'cors' });
           if (artRes.ok) {
             const artBlob = await artRes.blob();
             offlineArtwork = await new Promise<string>((resolve) => {
@@ -1255,19 +1145,35 @@ export default function App() {
             });
           }
         } catch (e) {
-          console.warn('Artwork offline caching fallback:', e);
+          console.warn('Artwork offline caching non-fatal fallback:', e);
         }
       }
 
       const songToSave = { ...song, artwork: offlineArtwork };
-      console.log(`[OFFLINE] Writing "${song.title}" to IndexedDB...`);
+      console.log(`[OFFLINE] Writing "${song.title}" into IndexedDB...`);
       await saveDownloadedSong(songToSave, audioBlob);
-      console.log(`[OFFLINE] Store and read-back verification complete for "${song.title}"`);
+      console.log(`[OFFLINE] Successfully stored in IndexedDB: "${song.title}"`);
       await refreshDownloads();
+
+      // Show DONE feedback
+      setToast({
+        id: `toast-${Date.now()}`,
+        type: 'done',
+        title: 'Saved Offline • Done! ✓',
+        message: `"${song.title}" is ready for flight & offline mode`,
+        song,
+        actionText: 'Offline Deck',
+        onAction: () => setCurrentTab('downloads'),
+      });
     } catch (err: any) {
-      console.error('[OFFLINE] Download failed:', err?.message || err);
-      // RETHROW so calling modal or component knows the download failed
-      throw new Error(err?.message || 'Unable to retrieve this audio file. Please try again.');
+      console.error('[OFFLINE] In-app save failed:', err?.message || err);
+      setToast({
+        id: `toast-${Date.now()}`,
+        type: 'error',
+        title: 'Save Offline Failed',
+        message: err?.message || 'Unable to cache audio stream. Please check connection and retry.',
+        song,
+      });
     } finally {
       setDownloadingSet((prev) => {
         const next = new Set(prev);
@@ -1384,7 +1290,7 @@ export default function App() {
               onPlaySong={handlePlaySong}
               onPlayAll={handlePlayAll}
               onToggleFavorite={handleToggleFavoriteSong}
-              onDownloadSong={handleTriggerDownloadModal}
+              onDownloadSong={handleDownloadSong}
               onAddToQueue={handleAddToQueue}
             />
           )}
@@ -1412,7 +1318,7 @@ export default function App() {
               onPlaySong={handlePlaySong}
               onPlayAll={handlePlayAll}
               onToggleFavorite={handleToggleFavoriteSong}
-              onDownloadSong={handleTriggerDownloadModal}
+              onDownloadSong={handleDownloadSong}
               onAddToQueue={handleAddToQueue}
               onAddAllToQueue={handleAddAllToQueue}
             />
@@ -1443,7 +1349,7 @@ export default function App() {
               }}
               onPlaySong={handlePlaySong}
               onToggleFavorite={handleToggleFavoriteSong}
-              onDownloadSong={handleTriggerDownloadModal}
+              onDownloadSong={handleDownloadSong}
               onAddToQueue={handleAddToQueue}
             />
           )}
@@ -1459,7 +1365,7 @@ export default function App() {
               onPlaySong={handlePlaySong}
               onPlayAll={handlePlayAll}
               onToggleFavorite={handleToggleFavoriteSong}
-              onDownloadSong={handleTriggerDownloadModal}
+              onDownloadSong={handleDownloadSong}
               onAddToQueue={handleAddToQueue}
               onAddAllToQueue={handleAddAllToQueue}
             />
@@ -1563,22 +1469,15 @@ export default function App() {
         onToggleRepeat={handleToggleRepeat}
         onToggleShuffle={handleToggleShuffle}
         onToggleFavorite={handleToggleFavoriteSong}
-        onDownload={handleTriggerDownloadModal}
+        onDownload={handleDownloadSong}
         onSelectSongFromQueue={(song, idx) => {
           setQueueIndex(idx);
           handlePlaySong(song);
         }}
       />
 
-      {/* Download Options Modal */}
-      {modalSongForDownload && (
-        <DownloadOptionsModal
-          song={modalSongForDownload}
-          onClose={() => setModalSongForDownload(null)}
-          onSaveAppLibrary={handleSaveToAppLibrary}
-          onSaveDevice={handleSaveDevice}
-        />
-      )}
+      {/* Global In-App Toast Feedback */}
+      <ToastNotification toast={toast} onClose={() => setToast(null)} />
 
       {/* Queue Drawer */}
       <QueueDrawer
