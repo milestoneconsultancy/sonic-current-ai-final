@@ -140,6 +140,7 @@ export async function saveDownloadedSong(song: Song, audioBlob: Blob): Promise<D
 }
 
 export async function getDownloadedSong(id: string): Promise<DownloadedSong | null> {
+  if (!id) return null;
   const db = await openDB();
   return new Promise((resolve, reject) => {
     const tx = db.transaction(STORE_NAME, 'readonly');
@@ -149,6 +150,45 @@ export async function getDownloadedSong(id: string): Promise<DownloadedSong | nu
     request.onsuccess = () => resolve(request.result || null);
     request.onerror = () => reject(request.error);
   });
+}
+
+/**
+ * Smart lookup to find downloaded song by ID or matching title + artist
+ * This ensures offline playback works even if song metadata is slightly different.
+ */
+export async function findDownloadedSong(song: Song | { id?: string; title?: string; artist?: string }): Promise<DownloadedSong | null> {
+  if (!song) return null;
+
+  // 1. Try direct ID lookup
+  if (song.id) {
+    const direct = await getDownloadedSong(song.id);
+    if (direct && direct.audioBlob && direct.audioBlob.size > 0) {
+      return direct;
+    }
+  }
+
+  // 2. Try canonical title + artist match across all downloaded tracks
+  if (song.title) {
+    const all = await getAllDownloadedSongs();
+    const targetTitle = (song.title || '').trim().toLowerCase();
+    const targetArtist = (song.artist || '').trim().toLowerCase();
+
+    const matched = all.find((d) => {
+      if (song.id && d.id === song.id) return true;
+      const dTitle = (d.title || '').trim().toLowerCase();
+      const dArtist = (d.artist || '').trim().toLowerCase();
+      if (targetTitle.length > 2 && dTitle === targetTitle && (!targetArtist || !dArtist || dArtist === targetArtist)) {
+        return true;
+      }
+      return false;
+    });
+
+    if (matched && matched.audioBlob && matched.audioBlob.size > 0) {
+      return matched;
+    }
+  }
+
+  return null;
 }
 
 export async function getAllDownloadedSongs(): Promise<DownloadedSong[]> {

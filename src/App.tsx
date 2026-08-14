@@ -28,6 +28,7 @@ import {
 import {
   saveDownloadedSong,
   getDownloadedSong,
+  findDownloadedSong,
   getAllDownloadedSongs,
   deleteDownloadedSong,
   clearAllDownloads,
@@ -293,7 +294,7 @@ export default function App() {
   // Helper to resolve playable URL for a song
   const getPlayableUrl = useCallback(async (song: Song): Promise<string> => {
     try {
-      const downloaded = await getDownloadedSong(song.id);
+      const downloaded = await findDownloadedSong(song);
       if (downloaded && downloaded.audioBlob) {
         return URL.createObjectURL(downloaded.audioBlob);
       }
@@ -301,13 +302,14 @@ export default function App() {
       console.warn('Error checking downloaded song:', e);
     }
 
+    if (song.url && song.url.startsWith('blob:')) {
+      return song.url;
+    }
+
     if (!navigator.onLine) {
       return '';
     }
-    if (song.url.startsWith('http://') || song.url.startsWith('https://')) {
-      return song.url;
-    }
-    if (song.url.startsWith('blob:')) {
+    if (song.url && (song.url.startsWith('http://') || song.url.startsWith('https://'))) {
       return song.url;
     }
     if (song.url) {
@@ -630,33 +632,44 @@ export default function App() {
     indexInContext?: number,
     isExistingQueue: boolean = false
   ) => {
-    if (!audioRef.current) return;
+    if (!audioRef.current || !song) return;
 
     try {
-      // Check if song is downloaded in IndexedDB for offline play
-      const downloaded = await getDownloadedSong(song.id);
-      let playableUrl = song.url;
+      // 1. Check if song is downloaded in IndexedDB for offline play (search by ID or Title+Artist)
+      const downloaded = await findDownloadedSong(song);
+      let playableUrl = '';
 
-      if (downloaded) {
+      if (downloaded && downloaded.audioBlob) {
         playableUrl = URL.createObjectURL(downloaded.audioBlob);
+      } else if (song.url && song.url.startsWith('blob:')) {
+        playableUrl = song.url;
       } else if (!navigator.onLine) {
-        setSearchError('You are currently offline. Connect to the internet or play downloaded songs.');
+        setSearchError('This track is not saved offline. Open the Offline Library tab to listen to your downloaded music without internet.');
         setIsPlaying(false);
         return;
-      } else if (song.url.startsWith('http://') || song.url.startsWith('https://')) {
+      } else if (song.url && (song.url.startsWith('http://') || song.url.startsWith('https://'))) {
         playableUrl = song.url;
-      } else if (!song.url.startsWith('blob:') && song.url) {
+      } else if (song.url) {
         playableUrl = `/api/audio?url=${encodeURIComponent(song.url)}`;
       }
 
-      setCurrentSong(song);
+      if (!playableUrl) {
+        if (!navigator.onLine) {
+          setSearchError('This track is not available offline. Please connect to the internet or play a downloaded song.');
+          setIsPlaying(false);
+          return;
+        }
+      }
+
+      const songWithArtwork = downloaded && downloaded.artwork ? { ...song, artwork: downloaded.artwork } : song;
+      setCurrentSong(songWithArtwork);
       setIsPlaying(true);
 
-      // Track playback in analytics
-      trackEvent('song_play', { song, language: selectedLanguages.join(',') });
+      // Track playback in analytics (non-blocking)
+      trackEvent('song_play', { song: songWithArtwork, language: selectedLanguages.join(',') });
 
       // Add to recently played
-      const updatedRP = addRecentlyPlayed(song);
+      const updatedRP = addRecentlyPlayed(songWithArtwork);
       setRecentlyPlayed(updatedRP);
 
       // Update queue
@@ -671,13 +684,13 @@ export default function App() {
         if (existingIdx !== -1) {
           setQueueIndex(existingIdx);
         } else {
-          setQueue((prev) => [...prev, song]);
+          setQueue((prev) => [...prev, songWithArtwork]);
           setQueueIndex(queue.length);
         }
       }
 
       const audio = audioRef.current;
-      if (audio.src !== playableUrl && !audio.src.endsWith(playableUrl)) {
+      if (playableUrl && (audio.src !== playableUrl && !audio.src.endsWith(playableUrl))) {
         audio.src = playableUrl;
         audio.volume = isMuted ? 0 : volume;
         audio.load();
