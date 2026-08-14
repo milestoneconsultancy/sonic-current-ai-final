@@ -1130,28 +1130,8 @@ export default function App() {
       console.log(`[OFFLINE] Starting Superfast In-App download for "${song.title}"`);
       const { blob: audioBlob } = await fetchAudioBlob(song.url, fileName);
 
-      // Fast artwork caching (non-blocking fallback)
-      let offlineArtwork = song.artwork;
-      if (song.artwork && (song.artwork.startsWith('http://') || song.artwork.startsWith('https://'))) {
-        try {
-          const artRes = await fetch(song.artwork, { mode: 'cors' });
-          if (artRes.ok) {
-            const artBlob = await artRes.blob();
-            offlineArtwork = await new Promise<string>((resolve) => {
-              const reader = new FileReader();
-              reader.onloadend = () => resolve(reader.result as string);
-              reader.onerror = () => resolve(song.artwork);
-              reader.readAsDataURL(artBlob);
-            });
-          }
-        } catch (e) {
-          console.warn('Artwork offline caching non-fatal fallback:', e);
-        }
-      }
-
-      const songToSave = { ...song, artwork: offlineArtwork };
-      console.log(`[OFFLINE] Writing "${song.title}" into IndexedDB...`);
-      await saveDownloadedSong(songToSave, audioBlob);
+      // Save directly to IndexedDB immediately without any delay
+      await saveDownloadedSong(song, audioBlob);
       console.log(`[OFFLINE] Successfully stored in IndexedDB: "${song.title}"`);
       await refreshDownloads();
 

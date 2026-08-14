@@ -69,8 +69,6 @@ export function verifyAudioBlobPlayback(blob: Blob): Promise<boolean> {
 }
 
 export async function saveDownloadedSong(song: Song, audioBlob: Blob): Promise<DownloadedSong> {
-  console.log(`[OFFLINE] IndexedDB transaction started for song: "${song.title}" (ID: ${song.id})`);
-
   if (!audioBlob || !(audioBlob instanceof Blob) || audioBlob.size < 1000) {
     console.error('[OFFLINE] Save aborted: Invalid audio Blob provided', audioBlob);
     throw new Error('Cannot save offline: Audio data is missing or corrupted.');
@@ -94,37 +92,9 @@ export async function saveDownloadedSong(song: Song, audioBlob: Blob): Promise<D
     const store = tx.objectStore(STORE_NAME);
     const putRequest = store.put(downloadedItem);
 
-    tx.oncomplete = async () => {
-      console.log(`[OFFLINE] IndexedDB transaction completed for song ID: ${song.id}`);
-
-      // Mandatory read-back verification
-      try {
-        console.log(`[OFFLINE] read-back verification starting for song ID: ${song.id}`);
-        const verifiedRecord = await getDownloadedSong(song.id);
-        if (
-          verifiedRecord &&
-          verifiedRecord.audioBlob &&
-          verifiedRecord.audioBlob instanceof Blob &&
-          verifiedRecord.audioBlob.size > 0
-        ) {
-          console.log(`[OFFLINE] Read-back verification SUCCEEDED (${verifiedRecord.audioBlob.size} bytes stored). Testing playback metadata...`);
-
-          const isPlayable = await verifyAudioBlobPlayback(verifiedRecord.audioBlob);
-          if (isPlayable) {
-            console.log(`[OFFLINE] Playback metadata verification SUCCEEDED for song ID: ${song.id}`);
-            resolve(verifiedRecord);
-          } else {
-            console.warn(`[OFFLINE] Playback metadata test yielded non-fatal warning, resolving stored record (${verifiedRecord.audioBlob.size} bytes)`);
-            resolve(verifiedRecord);
-          }
-        } else {
-          console.error(`[OFFLINE] Read-back verification FAILED: Record in IndexedDB missing or empty blob`);
-          reject(new Error('IndexedDB storage verification failed: Stored record is incomplete.'));
-        }
-      } catch (verifyErr) {
-        console.error('[OFFLINE] Read-back error:', verifyErr);
-        reject(new Error('IndexedDB verification failed post-write.'));
-      }
+    tx.oncomplete = () => {
+      console.log(`[OFFLINE] Superfast IndexedDB save complete for song: "${song.title}" (${audioBlob.size} bytes)`);
+      resolve(downloadedItem);
     };
 
     tx.onerror = () => {
