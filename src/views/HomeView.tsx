@@ -4,7 +4,6 @@ import { Song, TabType, RecentlyPlayedItem } from '../types';
 import { SongCard } from '../components/SongCard';
 import { SongListItem } from '../components/SongListItem';
 import { LanguageSelector } from '../components/LanguageSelector';
-import { VibeDJSection } from '../components/VibeDJSection';
 
 interface HomeViewProps {
   onTabChange: (tab: TabType) => void;
@@ -207,14 +206,6 @@ export const HomeView: React.FC<HomeViewProps> = ({
           onChange={onLanguageChange}
         />
       </div>
-
-      {/* AI VIBE DJ SECTION */}
-      <VibeDJSection
-        selectedLanguages={selectedLanguages}
-        onPlaySong={onPlaySong}
-        onPlayAll={onPlayAll}
-        onAddToQueue={onAddToQueue}
-      />
 
       {/* Quick Discovery Navigation Grid */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3.5">
