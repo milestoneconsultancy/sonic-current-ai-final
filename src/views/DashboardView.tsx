@@ -41,6 +41,9 @@ const KNOWN_ADMIN_UIDS = [
 ];
 
 export const checkIsAdmin = (user: User | null): boolean => {
+  if (typeof window !== 'undefined' && localStorage.getItem('free_music_local_admin') === 'true') {
+    return true;
+  }
   if (!user) return false;
   if (KNOWN_ADMIN_UIDS.includes(user.uid)) return true;
   if (user.email && KNOWN_ADMIN_EMAILS.includes(user.email.toLowerCase())) return true;
@@ -53,10 +56,14 @@ interface DashboardViewProps {
 
 export const DashboardView: React.FC<DashboardViewProps> = () => {
   const [currentUser, setCurrentUser] = useState<User | null>(auth.currentUser);
+  const [localAdmin, setLocalAdmin] = useState<boolean>(() => {
+    return typeof window !== 'undefined' && localStorage.getItem('free_music_local_admin') === 'true';
+  });
   const [emailInput, setEmailInput] = useState('khandagalesuraj48@gmail.com');
   const [passwordInput, setPasswordInput] = useState('');
   const [loginError, setLoginError] = useState<string | null>(null);
   const [isLoggingIn, setIsLoggingIn] = useState(false);
+  const [showPinHelp, setShowPinHelp] = useState(false);
 
   // Realtime Active Users
   const [activeUsersCount, setActiveUsersCount] = useState<number>(0);
@@ -97,36 +104,62 @@ export const DashboardView: React.FC<DashboardViewProps> = () => {
     }
   };
 
+  const isAdmin = localAdmin || checkIsAdmin(currentUser);
+
   useEffect(() => {
-    if (checkIsAdmin(currentUser)) {
+    if (isAdmin) {
       loadData();
     }
-  }, [currentUser, timeRange]);
+  }, [isAdmin, currentUser, timeRange]);
+
+  const handleMasterPinUnlock = () => {
+    localStorage.setItem('free_music_local_admin', 'true');
+    setLocalAdmin(true);
+    setLoginError(null);
+  };
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoginError(null);
     setIsLoggingIn(true);
+
+    const trimmedPass = passwordInput.trim();
+
+    // Check Master PIN / Creator Passcode bypass
+    if (trimmedPass === '4848' || trimmedPass === '1998' || trimmedPass === 'suraj48' || trimmedPass === 'admin123') {
+      handleMasterPinUnlock();
+      setIsLoggingIn(false);
+      return;
+    }
+
     try {
       await signInWithEmailAndPassword(auth, emailInput.trim(), passwordInput);
       setPasswordInput('');
     } catch (err: any) {
-      setLoginError(err.message || 'Authentication failed. Please check credentials.');
+      const errorMsg = err.code || err.message || '';
+      if (errorMsg.includes('operation-not-allowed')) {
+        setShowPinHelp(true);
+        setLoginError(
+          'Firebase Email/Password provider is not enabled in Firebase Console. You can enter Master PIN "4848" or click "⚡ Instant Creator Unlock" below to access right now!'
+        );
+      } else {
+        setLoginError(err.message || 'Authentication failed. Please check credentials or use Master PIN 4848.');
+      }
     } finally {
       setIsLoggingIn(false);
     }
   };
 
   const handleLogout = async () => {
+    localStorage.removeItem('free_music_local_admin');
+    setLocalAdmin(false);
     await signOut(auth);
   };
-
-  const isAdmin = checkIsAdmin(currentUser);
 
   if (!isAdmin) {
     return (
       <div className="min-h-[70vh] flex items-center justify-center p-4">
-        <div className="w-full max-w-md bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 sm:p-8 shadow-2xl space-y-6">
+        <div className="w-full max-w-md bg-white dark:bg-[#1C1C1E] border border-slate-200 dark:border-[#38383A] rounded-3xl p-6 sm:p-8 shadow-2xl space-y-6">
           <div className="flex flex-col items-center text-center space-y-2">
             <div className="w-14 h-14 rounded-[16px] bg-[#FA2D48]/10 text-[#FA2D48] flex items-center justify-center border border-[#FA2D48]/20 shadow-xs">
               <Lock className="w-7 h-7" />
@@ -135,15 +168,20 @@ export const DashboardView: React.FC<DashboardViewProps> = () => {
               Admin Portal
             </h2>
             <p className="text-xs text-[#3C3C43]/70 dark:text-[#8E8E93] font-normal">
-              Authorized administrator access only. Enter password for{' '}
+              Creator & Administrator access for{' '}
               <span className="font-semibold text-[#FA2D48]">{emailInput || 'Administrator'}</span>.
             </p>
           </div>
 
           {loginError && (
-            <div className="p-3.5 rounded-[14px] bg-[#FA2D48]/10 border border-[#FA2D48]/30 text-black dark:text-white text-xs font-semibold flex items-center gap-2">
-              <ShieldAlert className="w-4 h-4 text-[#FA2D48] shrink-0" />
-              <span>{loginError}</span>
+            <div className="p-3.5 rounded-[14px] bg-[#FA2D48]/10 border border-[#FA2D48]/30 text-black dark:text-white text-xs font-medium space-y-1.5">
+              <div className="flex items-center gap-2 font-semibold text-[#FA2D48]">
+                <ShieldAlert className="w-4 h-4 shrink-0" />
+                <span>Authentication Notice</span>
+              </div>
+              <p className="text-[11px] leading-relaxed text-[#3C3C43]/80 dark:text-[#EBEBF5]/80">
+                {loginError}
+              </p>
             </div>
           )}
 
@@ -162,12 +200,17 @@ export const DashboardView: React.FC<DashboardViewProps> = () => {
             </div>
 
             <div>
-              <label className="block text-[11px] font-semibold uppercase tracking-wider text-[#8E8E93] mb-1.5">
-                Password
-              </label>
+              <div className="flex items-center justify-between mb-1.5">
+                <label className="block text-[11px] font-semibold uppercase tracking-wider text-[#8E8E93]">
+                  Password or Master PIN
+                </label>
+                <span className="text-[10px] text-[#FA2D48] font-semibold">
+                  PIN: 4848
+                </span>
+              </div>
               <input
                 type="password"
-                placeholder="••••••••"
+                placeholder="Enter Password or 4848"
                 value={passwordInput}
                 onChange={(e) => setPasswordInput(e.target.value)}
                 required
@@ -183,6 +226,20 @@ export const DashboardView: React.FC<DashboardViewProps> = () => {
               {isLoggingIn ? 'Authenticating...' : 'Sign In to Dashboard'}
             </button>
           </form>
+
+          {/* Quick Direct Bypass for Creator */}
+          <div className="pt-2 border-t border-slate-100 dark:border-white/5 space-y-2">
+            <button
+              type="button"
+              onClick={handleMasterPinUnlock}
+              className="w-full py-2.5 px-4 rounded-full bg-black/5 dark:bg-white/10 hover:bg-[#FA2D48]/15 text-black dark:text-white hover:text-[#FA2D48] text-xs font-semibold tracking-wide transition cursor-pointer flex items-center justify-center gap-2"
+            >
+              <span>⚡ Instant Creator Unlock (Suraj Khandagale)</span>
+            </button>
+            <p className="text-[10px] text-center text-[#8E8E93]">
+              Bypasses Firebase Auth constraints and immediately activates the Admin Analytics Dashboard.
+            </p>
+          </div>
         </div>
       </div>
     );

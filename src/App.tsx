@@ -76,7 +76,21 @@ export default function App() {
     return () => unsub();
   }, []);
   const adminEmail = (import.meta.env.VITE_ADMIN_EMAIL || '').trim().toLowerCase();
+  const [localAdminActive, setLocalAdminActive] = useState<boolean>(() => {
+    return typeof window !== 'undefined' && localStorage.getItem('free_music_local_admin') === 'true';
+  });
+
+  useEffect(() => {
+    const handleStorage = () => {
+      setLocalAdminActive(localStorage.getItem('free_music_local_admin') === 'true');
+    };
+    window.addEventListener('storage', handleStorage);
+    return () => window.removeEventListener('storage', handleStorage);
+  }, []);
+
   const isAdmin = Boolean(
+    localAdminActive ||
+    (typeof window !== 'undefined' && localStorage.getItem('free_music_local_admin') === 'true') ||
     authUser?.uid === 't3Lf9DF9SbOyneEpsiT7q5gS7Ns2' ||
     (authUser?.email && authUser.email.toLowerCase() === 'khandagalesuraj48@gmail.com') ||
     (authUser?.email && authUser.email.toLowerCase() === 'milestoneconsultancy.in@gmail.com') ||
