@@ -1,5 +1,6 @@
 import express from 'express';
 import path from 'path';
+import crypto from 'crypto';
 import CryptoJS from 'crypto-js';
 import { GoogleGenAI } from '@google/genai';
 import { deduplicateSongs, verifyNoDuplicates } from './src/lib/dedupe.js';
@@ -700,6 +701,100 @@ const PORT = 3000;
 
 // Body Parser for JSON APIs
 app.use(express.json());
+
+// ==========================================
+// SECURE ADMIN AUTHENTICATION (TIMING-SAFE)
+// ==========================================
+const ADMIN_PASSWORD = (process.env.ADMIN_PASSWORD || 'Pk@12345').trim();
+const ADMIN_JWT_SECRET = process.env.ADMIN_JWT_SECRET || 'sonic_secure_secret_key_849203_admin_safe';
+
+function verifyAdminPassword(inputPass: string): boolean {
+  if (!inputPass) return false;
+  const inputHash = crypto.createHash('sha256').update(inputPass.trim()).digest();
+  const targetHash = crypto.createHash('sha256').update(ADMIN_PASSWORD).digest();
+  return crypto.timingSafeEqual(inputHash, targetHash);
+}
+
+function generateAdminToken(): { token: string; expiresAt: number } {
+  const expiresAt = Date.now() + 24 * 60 * 60 * 1000; // 24 hours
+  const payload = JSON.stringify({ role: 'admin', exp: expiresAt, iat: Date.now() });
+  const payloadB64 = Buffer.from(payload).toString('base64url');
+  const signature = crypto.createHmac('sha256', ADMIN_JWT_SECRET).update(payloadB64).digest('hex');
+  return { token: `${payloadB64}.${signature}`, expiresAt };
+}
+
+function verifyAdminToken(token: string): boolean {
+  if (!token || typeof token !== 'string') return false;
+  const parts = token.split('.');
+  if (parts.length !== 2) return false;
+  const [payloadB64, signature] = parts;
+  const expectedSignature = crypto.createHmac('sha256', ADMIN_JWT_SECRET).update(payloadB64).digest('hex');
+
+  const sigBuffer = Buffer.from(signature);
+  const expectedSigBuffer = Buffer.from(expectedSignature);
+  if (sigBuffer.length !== expectedSigBuffer.length || !crypto.timingSafeEqual(sigBuffer, expectedSigBuffer)) {
+    return false;
+  }
+
+  try {
+    const payload = JSON.parse(Buffer.from(payloadB64, 'base64url').toString('utf8'));
+    if (payload.role !== 'admin' || !payload.exp || Date.now() > payload.exp) {
+      return false;
+    }
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+// 1. Admin Login Endpoint
+app.post(['/api/admin/login', '/admin/login'], (req, res) => {
+  try {
+    const { password } = req.body || {};
+    if (!password || typeof password !== 'string') {
+      res.status(400).json({ success: false, error: 'Password is required' });
+      return;
+    }
+
+    if (!verifyAdminPassword(password)) {
+      res.status(401).json({ success: false, error: 'Invalid Admin Password' });
+      return;
+    }
+
+    const { token, expiresAt } = generateAdminToken();
+    res.json({
+      success: true,
+      token,
+      expiresAt,
+      message: 'Admin authentication successful',
+    });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: 'Authentication failed' });
+  }
+});
+
+// 2. Admin Verify Token Endpoint
+app.all(['/api/admin/verify-token', '/admin/verify-token'], (req, res) => {
+  try {
+    const authHeader = req.headers.authorization;
+    let token = '';
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      token = authHeader.substring(7).trim();
+    } else if (req.body && req.body.token) {
+      token = req.body.token;
+    } else if (req.query && req.query.token) {
+      token = String(req.query.token);
+    }
+
+    if (verifyAdminToken(token)) {
+      res.json({ success: true, valid: true });
+    } else {
+      res.status(401).json({ success: false, valid: false, error: 'Unauthorized or expired session' });
+    }
+  } catch (err) {
+    res.status(401).json({ success: false, valid: false });
+  }
+});
 
 // ==========================================
 // REALTIME MULTI-DEVICE PRESENCE & ANALYTICS
