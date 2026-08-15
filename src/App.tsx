@@ -76,7 +76,11 @@ export default function App() {
     return () => unsub();
   }, []);
   const adminEmail = (import.meta.env.VITE_ADMIN_EMAIL || '').trim().toLowerCase();
-  const isAdmin = Boolean(adminEmail && authUser?.email?.toLowerCase() === adminEmail);
+  const isAdmin = Boolean(
+    authUser?.uid === 't3Lf9DF9SbOyneEpsiT7q5gS7Ns2' ||
+    (authUser?.email && authUser.email.toLowerCase() === 'milestoneconsultancy.in@gmail.com') ||
+    (adminEmail && authUser?.email?.toLowerCase() === adminEmail)
+  );
 
   // Keep route in sync with currentTab
   useEffect(() => {

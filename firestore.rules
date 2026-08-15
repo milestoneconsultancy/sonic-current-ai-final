@@ -2,13 +2,30 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-    // User profile and all subcollections owned by user
+    function isAdmin() {
+      return request.auth != null && (
+        request.auth.uid == 't3Lf9DF9SbOyneEpsiT7q5gS7Ns2' ||
+        request.auth.token.email == 'milestoneconsultancy.in@gmail.com'
+      );
+    }
+
+    // User profile and subcollections owned by user or admin
     match /users/{userId} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
+      allow read, write: if request.auth != null && (request.auth.uid == userId || isAdmin());
       
       match /{document=**} {
-        allow read, write: if request.auth != null && request.auth.uid == userId;
+        allow read, write: if request.auth != null && (request.auth.uid == userId || isAdmin());
       }
+    }
+
+    // Analytics collections
+    match /analytics_events/{docId} {
+      allow create: if true;
+      allow read, write: if request.auth != null;
+    }
+
+    match /daily_summaries/{docId} {
+      allow read, write: if true;
     }
   }
 }

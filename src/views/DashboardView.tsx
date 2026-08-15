@@ -30,7 +30,21 @@ import {
   AnalyticsSummary,
 } from '../lib/analytics';
 
-const ADMIN_EMAIL = import.meta.env.VITE_ADMIN_EMAIL || '';
+const KNOWN_ADMIN_EMAILS = [
+  'milestoneconsultancy.in@gmail.com',
+  (import.meta.env.VITE_ADMIN_EMAIL || '').trim().toLowerCase(),
+].filter(Boolean);
+
+const KNOWN_ADMIN_UIDS = [
+  't3Lf9DF9SbOyneEpsiT7q5gS7Ns2',
+];
+
+export const checkIsAdmin = (user: User | null): boolean => {
+  if (!user) return false;
+  if (KNOWN_ADMIN_UIDS.includes(user.uid)) return true;
+  if (user.email && KNOWN_ADMIN_EMAILS.includes(user.email.toLowerCase())) return true;
+  return false;
+};
 
 interface DashboardViewProps {
   onTabChange?: (tab: any) => void;
@@ -38,7 +52,7 @@ interface DashboardViewProps {
 
 export const DashboardView: React.FC<DashboardViewProps> = () => {
   const [currentUser, setCurrentUser] = useState<User | null>(auth.currentUser);
-  const [emailInput, setEmailInput] = useState(ADMIN_EMAIL);
+  const [emailInput, setEmailInput] = useState(import.meta.env.VITE_ADMIN_EMAIL || 'milestoneconsultancy.in@gmail.com');
   const [passwordInput, setPasswordInput] = useState('');
   const [loginError, setLoginError] = useState<string | null>(null);
   const [isLoggingIn, setIsLoggingIn] = useState(false);
@@ -83,7 +97,7 @@ export const DashboardView: React.FC<DashboardViewProps> = () => {
   };
 
   useEffect(() => {
-    if (currentUser && currentUser.email?.toLowerCase() === ADMIN_EMAIL.toLowerCase()) {
+    if (checkIsAdmin(currentUser)) {
       loadData();
     }
   }, [currentUser, timeRange]);
@@ -106,7 +120,7 @@ export const DashboardView: React.FC<DashboardViewProps> = () => {
     await signOut(auth);
   };
 
-  const isAdmin = currentUser && currentUser.email?.toLowerCase() === ADMIN_EMAIL.toLowerCase();
+  const isAdmin = checkIsAdmin(currentUser);
 
   if (!isAdmin) {
     return (
@@ -121,7 +135,7 @@ export const DashboardView: React.FC<DashboardViewProps> = () => {
             </h2>
             <p className="text-xs text-[#3C3C43]/70 dark:text-[#8E8E93] font-normal">
               Authorized administrator access only. Enter password for{' '}
-              <span className="font-semibold text-[#FA2D48]">{ADMIN_EMAIL}</span>.
+              <span className="font-semibold text-[#FA2D48]">{emailInput || 'Administrator'}</span>.
             </p>
           </div>
 
