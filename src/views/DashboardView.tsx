@@ -31,6 +31,7 @@ import {
 } from '../lib/analytics';
 
 const KNOWN_ADMIN_EMAILS = [
+  'khandagalesuraj48@gmail.com',
   'milestoneconsultancy.in@gmail.com',
   (import.meta.env.VITE_ADMIN_EMAIL || '').trim().toLowerCase(),
 ].filter(Boolean);
@@ -52,7 +53,7 @@ interface DashboardViewProps {
 
 export const DashboardView: React.FC<DashboardViewProps> = () => {
   const [currentUser, setCurrentUser] = useState<User | null>(auth.currentUser);
-  const [emailInput, setEmailInput] = useState(import.meta.env.VITE_ADMIN_EMAIL || 'milestoneconsultancy.in@gmail.com');
+  const [emailInput, setEmailInput] = useState('khandagalesuraj48@gmail.com');
   const [passwordInput, setPasswordInput] = useState('');
   const [loginError, setLoginError] = useState<string | null>(null);
   const [isLoggingIn, setIsLoggingIn] = useState(false);

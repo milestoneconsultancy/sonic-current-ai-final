@@ -5,6 +5,7 @@ service cloud.firestore {
     function isAdmin() {
       return request.auth != null && (
         request.auth.uid == 't3Lf9DF9SbOyneEpsiT7q5gS7Ns2' ||
+        request.auth.token.email == 'khandagalesuraj48@gmail.com' ||
         request.auth.token.email == 'milestoneconsultancy.in@gmail.com'
       );
     }

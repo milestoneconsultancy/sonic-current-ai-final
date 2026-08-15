@@ -78,6 +78,7 @@ export default function App() {
   const adminEmail = (import.meta.env.VITE_ADMIN_EMAIL || '').trim().toLowerCase();
   const isAdmin = Boolean(
     authUser?.uid === 't3Lf9DF9SbOyneEpsiT7q5gS7Ns2' ||
+    (authUser?.email && authUser.email.toLowerCase() === 'khandagalesuraj48@gmail.com') ||
     (authUser?.email && authUser.email.toLowerCase() === 'milestoneconsultancy.in@gmail.com') ||
     (adminEmail && authUser?.email?.toLowerCase() === adminEmail)
   );
