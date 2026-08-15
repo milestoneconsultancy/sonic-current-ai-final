@@ -12,6 +12,7 @@ import {
   generateSmartQueueNext,
   parseVoiceCommand,
 } from './server/aiFeatures.js';
+import { getSongLyrics } from './server/lyricsService.js';
 
 const musicManager = new MultiProviderMusicManager([
   new PrimaryJioSaavnProvider(),
@@ -957,6 +958,41 @@ app.get(['/result', '/result/', '/api/result', '/api/search', '/api/jiosaavn'], 
     } catch (error) {
       console.error('[Voice Command API Error]:', error);
       res.status(500).json({ error: 'Failed to parse voice command' });
+    }
+  });
+
+  // 1h. Song Lyrics Metadata Endpoint
+  app.get(['/api/lyrics', '/lyrics'], async (req, res) => {
+    try {
+      const songId = (req.query.id as string) || '';
+      const title = (req.query.title as string) || '';
+      const artist = (req.query.artist as string) || '';
+      const album = (req.query.album as string) || '';
+      const durationParam = req.query.duration ? parseFloat(req.query.duration as string) : undefined;
+
+      if (!title && !songId) {
+        res.status(400).json({ error: 'Missing title or id parameter' });
+        return;
+      }
+
+      const lyricsData = await getSongLyrics({
+        songId,
+        title,
+        artist,
+        album,
+        duration: durationParam,
+      });
+
+      if (!lyricsData || (!lyricsData.lyrics && (!lyricsData.syncedLyrics || lyricsData.syncedLyrics.length === 0))) {
+        res.status(404).json({ error: 'Lyrics not found for this track' });
+        return;
+      }
+
+      res.setHeader('Cache-Control', 'public, max-age=86400, stale-while-revalidate=3600');
+      res.json(lyricsData);
+    } catch (error) {
+      console.error('[Lyrics API Error]:', error);
+      res.status(500).json({ error: 'Failed to fetch song lyrics' });
     }
   });
 

@@ -74,6 +74,20 @@ export interface UserPreference {
   updatedAt: string;
 }
 
+export interface LyricLine {
+  time: number; // seconds
+  text: string;
+}
+
+export interface LyricsData {
+  lyrics: string;
+  syncedLyrics?: LyricLine[];
+  isSynced: boolean;
+  source?: string;
+  language?: string;
+  copyright?: string;
+}
+
 export type TabType = 'home' | 'search' | 'downloads' | 'dashboard' | 'history' | 'favorites' | 'playlists' | 'account' | 'login' | 'signup';
 
 export type RepeatMode = 'off' | 'one' | 'all';

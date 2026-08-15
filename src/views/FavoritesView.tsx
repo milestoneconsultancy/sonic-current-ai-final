@@ -33,29 +33,29 @@ export const FavoritesView: React.FC<FavoritesViewProps> = ({
   onAddAllToQueue,
 }) => {
   return (
-    <div className="space-y-6 pb-24">
+    <div className="space-y-6 pb-24 animate-in fade-in duration-200">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-3 border-b border-slate-200 dark:border-slate-800">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-3 border-b border-[#C6C6C8]/30 dark:border-[#38383A]/50">
         <div>
-          <h2 className="text-xl font-black text-slate-900 dark:text-white flex items-center gap-2">
-            <Heart className="w-5 h-5 text-rose-500 fill-current" /> Liked Favorites ({favorites.length})
+          <h2 className="text-2xl sm:text-3xl font-bold text-black dark:text-white tracking-tight flex items-center gap-2">
+            <Heart className="w-6 h-6 text-[#FA2D48] fill-current" /> Favorite Songs ({favorites.length})
           </h2>
-          <p className="text-xs text-slate-500 dark:text-slate-400 font-medium mt-0.5">
-            Your collection of saved tracks stored in local browser storage.
+          <p className="text-xs text-[#3C3C43]/70 dark:text-[#8E8E93] font-normal mt-1">
+            Your collection of saved favorite tracks.
           </p>
         </div>
 
         {favorites.length > 0 && (
-          <div className="flex items-center gap-2.5">
+          <div className="flex items-center gap-2">
             <button
               onClick={() => onPlayAll(favorites)}
-              className="px-4 py-2 rounded-xl bg-slate-900 dark:bg-amber-500 hover:bg-slate-800 dark:hover:bg-amber-400 text-white dark:text-slate-950 font-bold text-xs flex items-center gap-1.5 shadow-md transition cursor-pointer"
+              className="px-4 py-2 rounded-full bg-[#FA2D48] hover:bg-[#FC3C44] text-white font-semibold text-xs flex items-center gap-1.5 shadow-xs transition cursor-pointer"
             >
-              <Play className="w-3.5 h-3.5 fill-current text-amber-400 dark:text-slate-950" /> Play All
+              <Play className="w-3.5 h-3.5 fill-current" /> Play All
             </button>
             <button
               onClick={() => onAddAllToQueue(favorites)}
-              className="px-3.5 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-200 font-bold text-xs flex items-center gap-1.5 transition cursor-pointer"
+              className="px-3.5 py-2 rounded-full bg-black/5 dark:bg-white/10 hover:bg-black/10 dark:hover:bg-white/15 text-black dark:text-white font-semibold text-xs flex items-center gap-1.5 transition cursor-pointer"
             >
               <Plus className="w-3.5 h-3.5" /> Queue All
             </button>
@@ -65,14 +65,14 @@ export const FavoritesView: React.FC<FavoritesViewProps> = ({
 
       {/* List */}
       {favorites.length === 0 ? (
-        <div className="py-16 text-center space-y-4 bg-white dark:bg-slate-900 rounded-3xl border border-slate-200/90 dark:border-slate-800 max-w-lg mx-auto p-8 shadow-xs">
-          <div className="w-16 h-16 rounded-3xl bg-rose-50 dark:bg-rose-500/20 text-rose-500 dark:text-rose-400 flex items-center justify-center mx-auto border border-rose-200/80 dark:border-rose-500/30">
+        <div className="py-16 text-center space-y-4 bg-[#FFFFFF] dark:bg-[#1C1C1E] rounded-[20px] border border-[#C6C6C8]/40 dark:border-[#38383A]/60 max-w-lg mx-auto p-8 shadow-xs">
+          <div className="w-16 h-16 rounded-full bg-[#FA2D48]/10 text-[#FA2D48] flex items-center justify-center mx-auto">
             <Heart className="w-8 h-8 fill-current" />
           </div>
           <div className="space-y-1">
-            <h3 className="text-lg font-extrabold text-slate-900 dark:text-white">No Liked Songs Yet</h3>
-            <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed font-medium max-w-sm mx-auto">
-              Tap the heart icon <Heart className="w-3 h-3 text-rose-500 fill-current inline mx-0.5" /> on any track while searching or playing to save it to your personal collection.
+            <h3 className="text-lg font-bold text-black dark:text-white">No Favorite Songs Yet</h3>
+            <p className="text-xs text-[#3C3C43]/70 dark:text-[#8E8E93] leading-relaxed max-w-sm mx-auto">
+              Tap the heart icon <Heart className="w-3 h-3 text-[#FA2D48] fill-current inline mx-0.5" /> on any track to add it to your Favorites.
             </p>
           </div>
         </div>
@@ -98,3 +98,4 @@ export const FavoritesView: React.FC<FavoritesViewProps> = ({
     </div>
   );
 };
+

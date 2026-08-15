@@ -258,9 +258,9 @@ export const SearchView: React.FC<SearchViewProps> = ({
     <div className="space-y-6 pb-24">
       {/* Immediate Focus Search Dialog Container */}
       <div ref={containerRef} className="relative z-30">
-        <div className="bg-white/95 dark:bg-slate-900/95 backdrop-blur-2xl p-4 sm:p-5 rounded-3xl border border-slate-200/90 dark:border-slate-800 shadow-lg shadow-slate-200/50 dark:shadow-slate-950/50">
-          <div className="relative flex items-center w-full rounded-2xl bg-slate-100/90 dark:bg-slate-800/90 border border-slate-200/90 dark:border-slate-700/80 hover:border-slate-300 dark:hover:border-slate-600 focus-within:border-amber-500 focus-within:ring-2 focus-within:ring-amber-400/20 focus-within:bg-white dark:focus-within:bg-slate-800 transition-all duration-200">
-            <Search className="w-5 h-5 text-slate-400 ml-4 shrink-0" />
+        <div className="bg-[#FFFFFF] dark:bg-[#1C1C1E] p-4 sm:p-5 rounded-[20px] border border-[#C6C6C8]/40 dark:border-[#38383A]/60 shadow-xs">
+          <div className="relative flex items-center w-full rounded-[14px] bg-[#E5E5EA]/50 dark:bg-[#2C2C2E]/60 border border-transparent focus-within:border-[#FA2D48] focus-within:bg-[#FFFFFF] dark:focus-within:bg-[#1C1C1E] transition-all duration-200">
+            <Search className="w-4 h-4 text-[#8E8E93] ml-3.5 shrink-0" />
             <input
               ref={inputRef}
               type="text"
@@ -272,27 +272,27 @@ export const SearchView: React.FC<SearchViewProps> = ({
                 setTypedQuery(e.target.value);
               }}
               onKeyDown={handleKeyDown}
-              placeholder="Search songs..."
-              className="w-full bg-transparent px-3.5 py-3.5 text-base font-bold text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none"
+              placeholder="Artists, Songs, Lyrics, and More"
+              className="w-full bg-transparent px-3 py-3 text-sm font-medium text-black dark:text-white placeholder-[#8E8E93] focus:outline-none"
             />
             {isSearching || isLoadingSuggestions ? (
-              <div className="mr-4 w-5 h-5 rounded-full border-2 border-amber-500 border-t-transparent animate-spin shrink-0" />
+              <div className="mr-3.5 w-4 h-4 rounded-full border-2 border-[#FA2D48] border-t-transparent animate-spin shrink-0" />
             ) : typedQuery ? (
               <button
                 onClick={handleClear}
-                className="mr-2 p-1.5 text-slate-400 hover:text-slate-800 dark:hover:text-white rounded-full hover:bg-slate-200 dark:hover:bg-slate-700 transition cursor-pointer"
+                className="mr-2 p-1.5 text-[#8E8E93] hover:text-black dark:hover:text-white rounded-full hover:bg-black/5 dark:hover:bg-white/10 transition cursor-pointer"
               >
-                <X className="w-5 h-5" />
+                <X className="w-4 h-4" />
               </button>
             ) : null}
 
             {/* Voice Search Button */}
             <button
               onClick={handleVoiceSearch}
-              className={`mr-2 p-2.5 rounded-xl transition cursor-pointer flex items-center justify-center ${
+              className={`mr-2 p-2 rounded-[10px] transition cursor-pointer flex items-center justify-center ${
                 isListening
-                  ? 'bg-red-500 text-white animate-bounce shadow-md shadow-red-500/30'
-                  : 'bg-amber-500/10 hover:bg-amber-500/20 text-amber-600 dark:text-amber-400 border border-amber-500/20'
+                  ? 'bg-[#FA2D48] text-white animate-bounce'
+                  : 'text-[#8E8E93] hover:text-[#FA2D48] hover:bg-[#FA2D48]/10'
               }`}
               title={isListening ? 'Listening...' : 'Voice Search'}
             >
@@ -306,7 +306,7 @@ export const SearchView: React.FC<SearchViewProps> = ({
                   onSearchChange(typedQuery.trim());
                 }
               }}
-              className="mr-2 px-4 py-2 rounded-xl bg-slate-900 dark:bg-amber-500 hover:bg-slate-800 dark:hover:bg-amber-400 text-white dark:text-slate-950 font-bold text-xs shadow-xs transition cursor-pointer"
+              className="mr-2 px-3.5 py-1.5 rounded-full bg-[#FA2D48] hover:bg-[#FC3C44] text-white font-semibold text-xs shadow-xs transition cursor-pointer"
             >
               Search
             </button>
@@ -314,42 +314,42 @@ export const SearchView: React.FC<SearchViewProps> = ({
 
           {/* Live Song Suggestions Overlay */}
           {showSuggestions && liveSuggestions.length > 0 && (
-            <div className="absolute top-full left-0 right-0 mt-2 p-2.5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-2xl backdrop-blur-2xl z-50 space-y-1 animate-in fade-in duration-150 max-h-96 overflow-y-auto">
-              <div className="flex items-center gap-1.5 text-[10px] font-black text-amber-700 dark:text-amber-400 uppercase tracking-wider px-3 py-1.5">
-                <Sparkles className="w-3.5 h-3.5 text-amber-500" /> Live Song Suggestions
+            <div className="absolute top-full left-0 right-0 mt-2 p-2.5 rounded-[18px] bg-[#FFFFFF]/95 dark:bg-[#1C1C1E]/95 border border-[#C6C6C8]/50 dark:border-[#38383A]/70 shadow-[0_10px_30px_rgba(0,0,0,0.15)] backdrop-blur-2xl z-50 space-y-1 animate-in fade-in duration-150 max-h-96 overflow-y-auto">
+              <div className="flex items-center gap-1.5 text-[10px] font-semibold text-[#8E8E93] uppercase tracking-wider px-3 py-1.5">
+                <Sparkles className="w-3.5 h-3.5 text-[#FA2D48]" /> Suggestions
               </div>
 
               {liveSuggestions.map((song, idx) => (
                 <div
                   key={`${song.id}_${idx}`}
                   onClick={() => handleSelectSuggestion(song)}
-                  className={`flex items-center justify-between p-2.5 rounded-xl cursor-pointer transition group ${
+                  className={`flex items-center justify-between p-2.5 rounded-[12px] cursor-pointer transition group ${
                     selectedIndex === idx
-                      ? 'bg-amber-100/90 dark:bg-amber-500/30 text-amber-950 dark:text-amber-100 ring-1 ring-amber-400'
-                      : 'hover:bg-amber-50/80 dark:hover:bg-slate-800 text-slate-900 dark:text-white'
+                      ? 'bg-[#FA2D48]/10 text-[#FA2D48]'
+                      : 'hover:bg-black/5 dark:hover:bg-white/5 text-black dark:text-white'
                   }`}
                 >
                   <div className="flex items-center gap-3 min-w-0">
                     <img
                       src={song.artwork || 'https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=100&h=100&fit=crop'}
                       alt={song.title}
-                      className="w-10 h-10 rounded-lg object-cover border border-slate-200 dark:border-slate-700 shrink-0 shadow-2xs group-hover:scale-105 transition-transform"
+                      className="w-10 h-10 rounded-[8px] object-cover border border-[#C6C6C8]/40 dark:border-[#38383A]/60 shrink-0"
                       onError={(e) => {
                         (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=100&h=100&fit=crop';
                       }}
                     />
                     <div className="min-w-0 flex flex-col">
-                      <span className="font-bold text-sm text-slate-900 dark:text-white truncate group-hover:text-amber-800 dark:group-hover:text-amber-300 transition-colors">
+                      <span className="font-semibold text-xs text-black dark:text-white truncate group-hover:text-[#FA2D48] transition-colors">
                         {song.title}
                       </span>
-                      <span className="text-xs font-medium text-slate-500 dark:text-slate-400 truncate">
+                      <span className="text-[11px] font-normal text-[#8E8E93] truncate">
                         {song.artist}
                       </span>
                     </div>
                   </div>
 
-                  <button className="px-3 py-1.5 rounded-lg bg-amber-500 text-slate-950 font-bold text-xs flex items-center gap-1 opacity-90 group-hover:opacity-100 group-hover:bg-amber-400 transition shrink-0 ml-2 cursor-pointer">
-                    <Play className="w-3 h-3 fill-current" /> Play
+                  <button className="px-3 py-1 rounded-full bg-[#FA2D48] text-white font-semibold text-xs flex items-center gap-1 shrink-0 ml-2 cursor-pointer">
+                    <Play className="w-2.5 h-2.5 fill-current" /> Play
                   </button>
                 </div>
               ))}
@@ -359,19 +359,19 @@ export const SearchView: React.FC<SearchViewProps> = ({
       </div>
 
       {/* Header Bar Controls for Results */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-2 border-b border-slate-200 dark:border-slate-800">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-2 border-b border-[#C6C6C8]/30 dark:border-[#38383A]/50">
         <div>
-          <h2 className="text-xl font-black text-slate-900 dark:text-white flex items-center gap-2">
-            <Search className="w-5 h-5 text-amber-600 dark:text-amber-400" />
-            {searchQuery.trim() ? `Search Results for "${searchQuery.trim()}"` : 'Explore Music'}
+          <h2 className="text-xl sm:text-2xl font-bold text-black dark:text-white tracking-tight flex items-center gap-2">
+            <Search className="w-5 h-5 text-[#FA2D48]" />
+            {searchQuery.trim() ? `Results for "${searchQuery.trim()}"` : 'Explore Music'}
           </h2>
-          <div className="flex items-center gap-2 flex-wrap mt-0.5">
-            <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">
-              {searchResults.length > 0 ? `${searchResults.length} songs found` : 'Search any song, artist, album or genre'}
+          <div className="flex items-center gap-2 flex-wrap mt-1">
+            <p className="text-xs text-[#3C3C43]/70 dark:text-[#8E8E93] font-normal">
+              {searchResults.length > 0 ? `${searchResults.length} songs` : 'Search songs, artists, albums, or genres'}
             </p>
             {activeContextQuery && searchQuery.trim() && (
-              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-700 dark:text-amber-300 text-[11px] font-bold">
-                <Sparkles className="w-3 h-3 text-amber-600 dark:text-amber-400 shrink-0" />
+              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-[#FA2D48]/10 text-[#FA2D48] text-[11px] font-semibold">
+                <Sparkles className="w-3 h-3 text-[#FA2D48] shrink-0" />
                 {activeContextQuery}
               </span>
             )}
@@ -379,18 +379,18 @@ export const SearchView: React.FC<SearchViewProps> = ({
         </div>
 
         {/* View Toggle & Action Buttons */}
-        <div className="flex items-center gap-2.5 self-end sm:self-auto">
+        <div className="flex items-center gap-2 self-end sm:self-auto">
           {searchResults.length > 0 && (
             <>
               <button
                 onClick={() => onPlayAll(searchResults)}
-                className="px-4 py-2 rounded-xl bg-slate-900 dark:bg-amber-500 hover:bg-slate-800 dark:hover:bg-amber-400 text-white dark:text-slate-950 font-bold text-xs flex items-center gap-1.5 shadow-md transition cursor-pointer"
+                className="px-4 py-2 rounded-full bg-[#FA2D48] hover:bg-[#FC3C44] text-white font-semibold text-xs flex items-center gap-1.5 shadow-xs transition cursor-pointer"
               >
-                <Play className="w-3.5 h-3.5 fill-current text-amber-400 dark:text-slate-950" /> Play All
+                <Play className="w-3.5 h-3.5 fill-current" /> Play All
               </button>
               <button
                 onClick={() => onAddAllToQueue(searchResults)}
-                className="px-3.5 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-200 font-bold text-xs flex items-center gap-1.5 transition cursor-pointer"
+                className="px-3.5 py-2 rounded-full bg-black/5 dark:bg-white/10 hover:bg-black/10 dark:hover:bg-white/15 text-black dark:text-white font-semibold text-xs flex items-center gap-1.5 transition cursor-pointer"
               >
                 <Plus className="w-3.5 h-3.5" /> Queue All
               </button>
@@ -398,18 +398,18 @@ export const SearchView: React.FC<SearchViewProps> = ({
           )}
 
           {/* View Mode Toggle */}
-          <div className="flex items-center p-1 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400">
+          <div className="flex items-center p-0.5 rounded-[10px] bg-[#E5E5EA]/70 dark:bg-[#2C2C2E] border border-[#C6C6C8]/40 dark:border-[#38383A]/60 text-[#8E8E93]">
             <button
               onClick={() => setViewMode('list')}
-              className={`p-1.5 rounded-lg transition cursor-pointer ${viewMode === 'list' ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-xs' : 'hover:text-slate-900 dark:hover:text-white'}`}
+              className={`p-1.5 rounded-[8px] transition cursor-pointer ${viewMode === 'list' ? 'bg-white dark:bg-[#1C1C1E] text-black dark:text-white shadow-xs' : 'hover:text-black dark:hover:text-white'}`}
             >
-              <List className="w-4 h-4" />
+              <List className="w-3.5 h-3.5" />
             </button>
             <button
               onClick={() => setViewMode('grid')}
-              className={`p-1.5 rounded-lg transition cursor-pointer ${viewMode === 'grid' ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-xs' : 'hover:text-slate-900 dark:hover:text-white'}`}
+              className={`p-1.5 rounded-[8px] transition cursor-pointer ${viewMode === 'grid' ? 'bg-white dark:bg-[#1C1C1E] text-black dark:text-white shadow-xs' : 'hover:text-black dark:hover:text-white'}`}
             >
-              <Grid className="w-4 h-4" />
+              <Grid className="w-3.5 h-3.5" />
             </button>
           </div>
         </div>
@@ -417,7 +417,7 @@ export const SearchView: React.FC<SearchViewProps> = ({
 
       {/* Error Message */}
       {searchError && (
-        <div className="p-4 rounded-2xl bg-red-50 border border-red-200 text-red-700 text-xs font-medium flex items-center justify-between">
+        <div className="p-4 rounded-[14px] bg-[#FA2D48]/10 border border-[#FA2D48]/30 text-black dark:text-white text-xs font-medium flex items-center justify-between">
           <span>{searchError}</span>
         </div>
       )}
@@ -425,8 +425,8 @@ export const SearchView: React.FC<SearchViewProps> = ({
       {/* Loading State */}
       {isSearching && (
         <div className="py-20 flex flex-col items-center justify-center space-y-3">
-          <div className="w-10 h-10 rounded-full border-2 border-amber-600 border-t-transparent animate-spin" />
-          <p className="text-xs font-mono font-bold text-slate-500">Searching high quality audio streams...</p>
+          <div className="w-8 h-8 rounded-full border-2 border-[#FA2D48] border-t-transparent animate-spin" />
+          <p className="text-xs text-[#8E8E93]">Searching Apple Music catalog...</p>
         </div>
       )}
 
@@ -452,7 +452,7 @@ export const SearchView: React.FC<SearchViewProps> = ({
               ))}
             </div>
           ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3.5">
               {searchResults.map((song, idx) => (
                 <SongCard
                   key={`${song.id}_${idx}`}
@@ -474,14 +474,14 @@ export const SearchView: React.FC<SearchViewProps> = ({
           {/* Infinite Scroll Sentinel & Progressive Loading Indicator */}
           <div ref={sentinelRef} className="pt-6 pb-2 flex flex-col items-center justify-center text-center">
             {isLoadingMore && (
-              <div className="flex items-center gap-2.5 py-3 px-5 rounded-2xl bg-white border border-slate-200/90 text-xs font-bold text-slate-700 shadow-xs">
-                <div className="w-4 h-4 rounded-full border-2 border-amber-500 border-t-transparent animate-spin" />
+              <div className="flex items-center gap-2.5 py-2.5 px-4 rounded-full bg-[#FFFFFF] dark:bg-[#1C1C1E] border border-[#C6C6C8]/40 dark:border-[#38383A]/60 text-xs font-semibold text-black dark:text-white shadow-xs">
+                <div className="w-3.5 h-3.5 rounded-full border-2 border-[#FA2D48] border-t-transparent animate-spin" />
                 <span>Loading more songs…</span>
               </div>
             )}
             {!hasMoreResults && searchResults.length > 0 && !isLoadingMore && (
-              <p className="text-xs font-semibold text-slate-400 py-2">
-                You've reached the end of available results.
+              <p className="text-xs font-medium text-[#8E8E93] py-2">
+                You've reached the end of results.
               </p>
             )}
           </div>
@@ -490,24 +490,21 @@ export const SearchView: React.FC<SearchViewProps> = ({
 
       {/* Empty / Welcome Search Prompt State */}
       {!isSearching && searchResults.length === 0 && (
-        <div className="py-12 px-6 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 text-center space-y-6 max-w-2xl mx-auto shadow-xs">
-          <div className="w-16 h-16 rounded-3xl bg-amber-100 dark:bg-amber-500/20 border border-amber-200 dark:border-amber-500/30 flex items-center justify-center mx-auto text-amber-700 dark:text-amber-400">
+        <div className="py-12 px-6 rounded-[20px] bg-[#FFFFFF] dark:bg-[#1C1C1E] border border-[#C6C6C8]/40 dark:border-[#38383A]/60 text-center space-y-6 max-w-2xl mx-auto shadow-xs">
+          <div className="w-16 h-16 rounded-full bg-[#FA2D48]/10 flex items-center justify-center mx-auto text-[#FA2D48]">
             <Music2 className="w-8 h-8" />
           </div>
 
-          <div className="space-y-2">
-            <h3 className="text-2xl font-black text-slate-900 dark:text-white">FREE MUSIC</h3>
-            <p className="text-xs font-bold text-amber-600 dark:text-amber-400 uppercase tracking-widest mt-0.5">
-              SURAJ KHANDAGALE
-            </p>
-            <p className="text-xs text-slate-500 dark:text-slate-400 max-w-md mx-auto leading-relaxed font-medium pt-1">
-              Type any song name, artist, Marathi DJ track, or Bollywood hits above to listen immediately.
+          <div className="space-y-1">
+            <h3 className="text-2xl font-bold text-black dark:text-white tracking-tight">Search Apple Music</h3>
+            <p className="text-xs text-[#3C3C43]/70 dark:text-[#8E8E93] max-w-md mx-auto leading-relaxed font-normal pt-1">
+              Find any song, artist, album, or soundtrack to start listening immediately.
             </p>
           </div>
 
           <div>
-            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-3 block">
-              Popular Searches
+            <span className="text-[10px] font-semibold uppercase tracking-wider text-[#8E8E93] mb-3 block">
+              Trending Searches
             </span>
             <div className="flex flex-wrap justify-center gap-2">
               {popularQueries.map((query) => (
@@ -517,7 +514,7 @@ export const SearchView: React.FC<SearchViewProps> = ({
                     setTypedQuery(query);
                     onSearchChange(query);
                   }}
-                  className="px-4 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 hover:bg-slate-900 dark:hover:bg-amber-500 hover:text-white dark:hover:text-slate-950 border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-700 dark:text-slate-200 transition shadow-xs cursor-pointer"
+                  className="px-3.5 py-1.5 rounded-full bg-black/5 dark:bg-white/10 hover:bg-[#FA2D48] hover:text-white text-xs font-semibold text-black dark:text-white transition shadow-2xs cursor-pointer"
                 >
                   {query}
                 </button>

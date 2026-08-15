@@ -360,7 +360,7 @@ export const DancingBaby: React.FC<DancingBabyProps> = ({
 
         {/* Small Glass Base Pedestal Badge */}
         <div
-          className="mt-1 px-3 py-0.5 rounded-full backdrop-blur-md border text-[9px] font-black tracking-wider uppercase shadow-md text-center transition-all duration-700 pointer-events-none"
+          className="mt-1 px-3 py-0.5 rounded-full backdrop-blur-md border text-[9px] font-bold tracking-wider uppercase shadow-md text-center transition-all duration-700 pointer-events-none"
           style={{
             borderColor: `rgba(${colorRgbStr}, 0.4)`,
             backgroundColor: `rgba(${colorRgbStr}, 0.2)`,
@@ -372,19 +372,19 @@ export const DancingBaby: React.FC<DancingBabyProps> = ({
               ? `DANCING (${song.bpm} BPM) ♪`
               : 'DANCING ♪'
             : motionState === 'settling'
-            ? 'SETTLING...'
+            ? 'PAUSED'
             : 'IDLE'}
         </div>
 
         {/* Subtle Speed Selector Controls (Affects ONLY baby animation speed) */}
-        <div className="mt-1.5 flex items-center gap-1 p-0.5 rounded-full bg-slate-950/60 backdrop-blur-md border border-white/15 shadow-lg pointer-events-auto">
+        <div className="mt-1.5 flex items-center gap-1 p-0.5 rounded-full bg-black/70 backdrop-blur-md border border-white/15 shadow-lg pointer-events-auto">
           <button
             onClick={() => handleSetSpeed('slow')}
             title="Slow dance tempo"
-            className={`px-2 py-0.5 rounded-full text-[9px] font-bold tracking-tight transition cursor-pointer ${
+            className={`px-2 py-0.5 rounded-full text-[9px] font-semibold tracking-tight transition cursor-pointer ${
               userSpeed === 'slow' && !isBpmDriven
-                ? 'bg-amber-400 text-slate-950 shadow-xs'
-                : 'text-slate-300 hover:text-white'
+                ? 'bg-[#FA2D48] text-white shadow-xs'
+                : 'text-white/70 hover:text-white'
             }`}
           >
             Slow
@@ -392,10 +392,10 @@ export const DancingBaby: React.FC<DancingBabyProps> = ({
           <button
             onClick={() => handleSetSpeed('normal')}
             title="Normal dance tempo"
-            className={`px-2 py-0.5 rounded-full text-[9px] font-bold tracking-tight transition cursor-pointer ${
+            className={`px-2 py-0.5 rounded-full text-[9px] font-semibold tracking-tight transition cursor-pointer ${
               userSpeed === 'normal' || isBpmDriven
-                ? 'bg-amber-400 text-slate-950 shadow-xs'
-                : 'text-slate-300 hover:text-white'
+                ? 'bg-[#FA2D48] text-white shadow-xs'
+                : 'text-white/70 hover:text-white'
             }`}
           >
             Normal
@@ -403,10 +403,10 @@ export const DancingBaby: React.FC<DancingBabyProps> = ({
           <button
             onClick={() => handleSetSpeed('fast')}
             title="Fast dance tempo"
-            className={`px-2 py-0.5 rounded-full text-[9px] font-bold tracking-tight transition cursor-pointer ${
+            className={`px-2 py-0.5 rounded-full text-[9px] font-semibold tracking-tight transition cursor-pointer ${
               userSpeed === 'fast' && !isBpmDriven
-                ? 'bg-amber-400 text-slate-950 shadow-xs'
-                : 'text-slate-300 hover:text-white'
+                ? 'bg-[#FA2D48] text-white shadow-xs'
+                : 'text-white/70 hover:text-white'
             }`}
           >
             Fast

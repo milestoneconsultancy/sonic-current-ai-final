@@ -51,29 +51,29 @@ export const HistoryView: React.FC<HistoryViewProps> = ({
   };
 
   return (
-    <div className="space-y-6 pb-24">
+    <div className="space-y-6 pb-24 animate-in fade-in duration-200">
       {/* View Selector Tabs */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-3 border-b border-slate-200 dark:border-slate-800">
-        <div className="flex items-center gap-2 p-1.5 rounded-2xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-3 border-b border-[#C6C6C8]/30 dark:border-[#38383A]/50">
+        <div className="flex items-center gap-1.5 p-1 rounded-[12px] bg-[#E5E5EA]/70 dark:bg-[#1C1C1E] border border-[#C6C6C8]/40 dark:border-[#38383A]/60">
           <button
             onClick={() => setActiveTab('recentlyPlayed')}
-            className={`px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2 cursor-pointer ${
+            className={`px-3.5 py-1.5 rounded-[9px] text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer ${
               activeTab === 'recentlyPlayed'
-                ? 'bg-slate-900 dark:bg-amber-500 text-white dark:text-slate-950 shadow-xs'
-                : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
+                ? 'bg-white dark:bg-[#2C2C2E] text-black dark:text-white shadow-xs'
+                : 'text-[#8E8E93] hover:text-black dark:hover:text-white'
             }`}
           >
-            <Clock className="w-4 h-4 text-amber-500 dark:text-amber-950" /> Recently Played ({recentlyPlayed.length})
+            <Clock className="w-3.5 h-3.5 text-[#FA2D48]" /> Recently Played ({recentlyPlayed.length})
           </button>
           <button
             onClick={() => setActiveTab('searchHistory')}
-            className={`px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2 cursor-pointer ${
+            className={`px-3.5 py-1.5 rounded-[9px] text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer ${
               activeTab === 'searchHistory'
-                ? 'bg-slate-900 dark:bg-amber-500 text-white dark:text-slate-950 shadow-xs'
-                : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
+                ? 'bg-white dark:bg-[#2C2C2E] text-black dark:text-white shadow-xs'
+                : 'text-[#8E8E93] hover:text-black dark:hover:text-white'
             }`}
           >
-            <Search className="w-4 h-4 text-amber-500 dark:text-amber-950" /> Search Queries ({searchHistory.length})
+            <Search className="w-3.5 h-3.5 text-[#FA2D48]" /> Search History ({searchHistory.length})
           </button>
         </div>
 
@@ -81,39 +81,34 @@ export const HistoryView: React.FC<HistoryViewProps> = ({
         {activeTab === 'recentlyPlayed' && recentlyPlayed.length > 0 && (
           <button
             onClick={onClearRecentlyPlayed}
-            className="px-3.5 py-2 rounded-xl bg-white dark:bg-slate-800 hover:bg-red-50 dark:hover:bg-red-500/20 text-xs font-bold text-slate-600 dark:text-slate-300 hover:text-red-600 dark:hover:text-red-400 border border-slate-200 dark:border-slate-700 transition flex items-center gap-1.5 shadow-xs cursor-pointer"
+            className="px-3.5 py-1.5 rounded-full bg-black/5 dark:bg-white/10 hover:bg-[#FA2D48]/15 text-xs font-semibold text-black dark:text-white hover:text-[#FA2D48] transition flex items-center gap-1.5 cursor-pointer"
           >
-            <Trash2 className="w-3.5 h-3.5" /> Clear Plays
+            <Trash2 className="w-3.5 h-3.5" /> Clear History
           </button>
         )}
 
         {activeTab === 'searchHistory' && searchHistory.length > 0 && (
           <button
             onClick={onClearSearchHistory}
-            className="px-3.5 py-2 rounded-xl bg-white dark:bg-slate-800 hover:bg-red-50 dark:hover:bg-red-500/20 text-xs font-bold text-slate-600 dark:text-slate-300 hover:text-red-600 dark:hover:text-red-400 border border-slate-200 dark:border-slate-700 transition flex items-center gap-1.5 shadow-xs cursor-pointer"
+            className="px-3.5 py-1.5 rounded-full bg-black/5 dark:bg-white/10 hover:bg-[#FA2D48]/15 text-xs font-semibold text-black dark:text-white hover:text-[#FA2D48] transition flex items-center gap-1.5 cursor-pointer"
           >
             <Trash2 className="w-3.5 h-3.5" /> Clear Searches
           </button>
         )}
       </div>
 
-      {/* Local Storage Privacy Note */}
-      <p className="text-[11px] text-slate-500 dark:text-slate-400 font-mono font-bold">
-        🔒 All history entries are strictly saved in your local browser storage (`localStorage`) and never sent to a remote server.
-      </p>
-
       {/* TAB 1: RECENTLY PLAYED */}
       {activeTab === 'recentlyPlayed' && (
         <div>
           {recentlyPlayed.length === 0 ? (
-            <div className="py-16 text-center space-y-4 bg-white dark:bg-slate-900 rounded-3xl border border-slate-200/90 dark:border-slate-800 max-w-lg mx-auto p-8 shadow-xs">
-              <div className="w-16 h-16 rounded-3xl bg-amber-50 dark:bg-amber-500/20 border border-amber-200 dark:border-amber-500/30 text-amber-600 dark:text-amber-400 flex items-center justify-center mx-auto">
+            <div className="py-16 text-center space-y-4 bg-[#FFFFFF] dark:bg-[#1C1C1E] rounded-[20px] border border-[#C6C6C8]/40 dark:border-[#38383A]/60 max-w-lg mx-auto p-8 shadow-xs">
+              <div className="w-16 h-16 rounded-full bg-[#FA2D48]/10 text-[#FA2D48] flex items-center justify-center mx-auto">
                 <Clock className="w-8 h-8" />
               </div>
               <div className="space-y-1">
-                <h4 className="text-lg font-extrabold text-slate-900 dark:text-white">No Listening History Yet</h4>
-                <p className="text-xs text-slate-500 dark:text-slate-400 font-medium leading-relaxed max-w-sm mx-auto">
-                  Tracks you stream on Free Music will automatically appear here so you can easily jump back to your recent favorites.
+                <h4 className="text-lg font-bold text-black dark:text-white">No Listening History</h4>
+                <p className="text-xs text-[#3C3C43]/70 dark:text-[#8E8E93] font-normal leading-relaxed max-w-sm mx-auto">
+                  Tracks you stream will automatically appear here so you can easily jump back to your recent favorites.
                 </p>
               </div>
             </div>
@@ -134,7 +129,7 @@ export const HistoryView: React.FC<HistoryViewProps> = ({
                     onAddToQueue={onAddToQueue}
                     onRemove={() => onRemoveRecentlyPlayedItem(item.id)}
                   />
-                  <span className="absolute top-3.5 right-28 text-[10px] font-mono font-bold text-slate-400 dark:text-slate-500 hidden md:block">
+                  <span className="absolute top-3.5 right-28 text-[10px] font-medium text-[#8E8E93] hidden md:block">
                     {formatTimestamp(item.timestamp)}
                   </span>
                 </div>
@@ -148,14 +143,14 @@ export const HistoryView: React.FC<HistoryViewProps> = ({
       {activeTab === 'searchHistory' && (
         <div>
           {searchHistory.length === 0 ? (
-            <div className="py-16 text-center space-y-4 bg-white dark:bg-slate-900 rounded-3xl border border-slate-200/90 dark:border-slate-800 max-w-lg mx-auto p-8 shadow-xs">
-              <div className="w-16 h-16 rounded-3xl bg-amber-50 dark:bg-amber-500/20 border border-amber-200 dark:border-amber-500/30 text-amber-600 dark:text-amber-400 flex items-center justify-center mx-auto">
+            <div className="py-16 text-center space-y-4 bg-[#FFFFFF] dark:bg-[#1C1C1E] rounded-[20px] border border-[#C6C6C8]/40 dark:border-[#38383A]/60 max-w-lg mx-auto p-8 shadow-xs">
+              <div className="w-16 h-16 rounded-full bg-[#FA2D48]/10 text-[#FA2D48] flex items-center justify-center mx-auto">
                 <Search className="w-8 h-8" />
               </div>
               <div className="space-y-1">
-                <h4 className="text-lg font-extrabold text-slate-900 dark:text-white">No Search History Yet</h4>
-                <p className="text-xs text-slate-500 dark:text-slate-400 font-medium leading-relaxed max-w-sm mx-auto">
-                  Your search terms will be remembered here locally so you can quickly repeat popular searches anytime.
+                <h4 className="text-lg font-bold text-black dark:text-white">No Search History</h4>
+                <p className="text-xs text-[#3C3C43]/70 dark:text-[#8E8E93] font-normal leading-relaxed max-w-sm mx-auto">
+                  Your search terms will be remembered here so you can quickly repeat searches anytime.
                 </p>
               </div>
             </div>
@@ -165,13 +160,13 @@ export const HistoryView: React.FC<HistoryViewProps> = ({
                 <div
                   key={item.id}
                   onClick={() => onSelectSearchQuery(item.query)}
-                  className="group flex items-center justify-between p-3.5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 hover:border-amber-400 dark:hover:border-amber-500/50 hover:bg-slate-50 dark:hover:bg-slate-800/80 cursor-pointer transition shadow-xs"
+                  className="group flex items-center justify-between p-3.5 rounded-[14px] bg-[#FFFFFF] dark:bg-[#1C1C1E] border border-[#C6C6C8]/40 dark:border-[#38383A]/60 hover:border-[#FA2D48] dark:hover:border-[#FA2D48] cursor-pointer transition shadow-xs"
                 >
                   <div className="flex items-center gap-3 min-w-0">
-                    <Search className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0" />
+                    <Search className="w-4 h-4 text-[#FA2D48] shrink-0" />
                     <div className="min-w-0">
-                      <h4 className="text-sm font-bold text-slate-900 dark:text-white truncate">{item.query}</h4>
-                      <p className="text-[10px] font-mono font-bold text-slate-400 dark:text-slate-500">{formatTimestamp(item.timestamp)}</p>
+                      <h4 className="text-xs font-semibold text-black dark:text-white truncate">{item.query}</h4>
+                      <p className="text-[10px] text-[#8E8E93]">{formatTimestamp(item.timestamp)}</p>
                     </div>
                   </div>
 
@@ -180,9 +175,9 @@ export const HistoryView: React.FC<HistoryViewProps> = ({
                       e.stopPropagation();
                       onRemoveSearchItem(item.id);
                     }}
-                    className="p-1.5 text-slate-400 dark:text-slate-500 hover:text-slate-800 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition cursor-pointer"
+                    className="p-1.5 text-[#8E8E93] hover:text-black dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-full transition cursor-pointer"
                   >
-                    <X className="w-4 h-4" />
+                    <X className="w-3.5 h-3.5" />
                   </button>
                 </div>
               ))}
@@ -193,3 +188,4 @@ export const HistoryView: React.FC<HistoryViewProps> = ({
     </div>
   );
 };
+

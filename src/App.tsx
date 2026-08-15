@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { App as CapApp } from '@capacitor/app';
 import { StatusBar, Style } from '@capacitor/status-bar';
 import {
@@ -175,6 +175,7 @@ export default function App() {
   const [downloadedSongs, setDownloadedSongs] = useState<DownloadedSong[]>([]);
   const [downloadingSet, setDownloadingSet] = useState<Set<string>>(new Set());
   const [storageStats, setStorageStats] = useState({ count: 0, totalBytes: 0, formattedSize: '0 B' });
+  const [toast, setToast] = useState<ToastData | null>(null);
 
   // Network Offline State
   const [isOffline, setIsOffline] = useState(!navigator.onLine);
@@ -1072,9 +1073,6 @@ export default function App() {
     setFavorites(getFavorites());
     trackEvent('like', { song });
   };
-
-  // In-App Offline Download & Toast State
-  const [toast, setToast] = useState<ToastData | null>(null);
 
   // In-App Offline Download Management (IndexedDB Superfast Audio Storage)
   const handleDownloadSong = async (song: Song) => {

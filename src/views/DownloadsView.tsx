@@ -96,44 +96,44 @@ export const DownloadsView: React.FC<DownloadsViewProps> = ({
   };
 
   return (
-    <div className="space-y-6 pb-24">
+    <div className="space-y-6 pb-24 animate-in fade-in duration-200">
       {/* Storage Indicator Banner */}
-      <div className="p-6 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 flex flex-col md:flex-row items-start md:items-center justify-between gap-6 shadow-xs">
+      <div className="p-5 sm:p-6 rounded-[20px] bg-[#FFFFFF] dark:bg-[#1C1C1E] border border-[#C6C6C8]/40 dark:border-[#38383A]/60 flex flex-col md:flex-row items-start md:items-center justify-between gap-6 shadow-xs">
         <div className="flex items-center gap-4">
-          <div className="w-12 h-12 rounded-2xl bg-emerald-50 dark:bg-emerald-500/20 border border-emerald-200 dark:border-emerald-500/30 text-emerald-700 dark:text-emerald-400 flex items-center justify-center shrink-0">
+          <div className="w-12 h-12 rounded-[14px] bg-[#34C759]/10 text-[#34C759] flex items-center justify-center shrink-0">
             <HardDrive className="w-6 h-6" />
           </div>
           <div>
-            <h2 className="text-xl font-black text-slate-900 dark:text-white">Offline Music Storage</h2>
-            <p className="text-xs text-slate-500 dark:text-slate-400 font-medium mt-0.5">
-              {storageStats.count} tracks stored offline • {storageStats.formattedSize} used (No Limits)
+            <h2 className="text-xl sm:text-2xl font-bold text-black dark:text-white tracking-tight">Downloaded Music</h2>
+            <p className="text-xs text-[#3C3C43]/70 dark:text-[#8E8E93] font-normal mt-0.5">
+              {storageStats.count} tracks offline • {storageStats.formattedSize} storage used
             </p>
           </div>
         </div>
 
         {/* Top Control Actions */}
-        <div className="flex flex-wrap items-center gap-2.5">
+        <div className="flex flex-wrap items-center gap-2">
           {downloadedSongs.length > 0 && (
             <>
               <button
                 onClick={() => onPlayAll(songList)}
-                className="px-4 py-2.5 rounded-xl bg-slate-900 dark:bg-amber-500 hover:bg-slate-800 dark:hover:bg-amber-400 text-white dark:text-slate-950 font-bold text-xs flex items-center gap-1.5 shadow-md transition cursor-pointer"
+                className="px-4 py-2 rounded-full bg-[#FA2D48] hover:bg-[#FC3C44] text-white font-semibold text-xs flex items-center gap-1.5 shadow-xs transition cursor-pointer"
               >
-                <Play className="w-3.5 h-3.5 fill-current text-amber-400 dark:text-slate-950" /> Play All
+                <Play className="w-3.5 h-3.5 fill-current" /> Play All
               </button>
 
               <button
                 onClick={handleShufflePlay}
-                className="px-4 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs flex items-center gap-1.5 shadow-md transition cursor-pointer"
+                className="px-4 py-2 rounded-full bg-black/5 dark:bg-white/10 hover:bg-black/10 dark:hover:bg-white/15 text-black dark:text-white font-semibold text-xs flex items-center gap-1.5 transition cursor-pointer"
               >
                 <Shuffle className="w-3.5 h-3.5" /> Shuffle
               </button>
 
               <button
                 onClick={() => setShowConfirmClear(true)}
-                className="px-4 py-2.5 rounded-xl bg-white dark:bg-slate-800 hover:bg-red-50 dark:hover:bg-red-500/20 text-slate-700 dark:text-slate-300 hover:text-red-600 dark:hover:text-red-400 border border-slate-200 dark:border-slate-700 text-xs font-bold transition flex items-center gap-1.5 shadow-xs cursor-pointer"
+                className="px-3.5 py-2 rounded-full bg-black/5 dark:bg-white/10 hover:bg-[#FA2D48]/15 text-black dark:text-white hover:text-[#FA2D48] text-xs font-semibold transition flex items-center gap-1.5 cursor-pointer"
               >
-                <Trash2 className="w-3.5 h-3.5" /> Clear All
+                <Trash2 className="w-3.5 h-3.5" /> Clear
               </button>
             </>
           )}
@@ -144,23 +144,23 @@ export const DownloadsView: React.FC<DownloadsViewProps> = ({
       {downloadedSongs.length > 0 && (
         <div className="flex flex-col sm:flex-row gap-3 items-center justify-between">
           <div className="relative w-full sm:w-72">
-            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[#8E8E93]" />
             <input
               type="text"
               placeholder="Search downloads..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs text-slate-800 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 shadow-xs"
+              className="w-full pl-10 pr-4 py-2 rounded-[12px] bg-[#FFFFFF] dark:bg-[#1C1C1E] border border-[#C6C6C8]/40 dark:border-[#38383A]/60 text-xs text-black dark:text-white placeholder-[#8E8E93] focus:outline-none focus:border-[#FA2D48] shadow-xs"
             />
           </div>
 
           <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
-            <ArrowUpDown className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-            <span className="text-xs text-slate-500 dark:text-slate-400 font-medium">Sort by:</span>
+            <ArrowUpDown className="w-3.5 h-3.5 text-[#8E8E93] shrink-0" />
+            <span className="text-xs text-[#3C3C43]/70 dark:text-[#8E8E93] font-normal">Sort:</span>
             <select
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value as SortOption)}
-              className="px-3 py-1.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs font-semibold text-slate-800 dark:text-slate-100 focus:outline-none focus:border-amber-500 shadow-xs cursor-pointer"
+              className="px-3 py-1.5 rounded-[10px] bg-[#FFFFFF] dark:bg-[#1C1C1E] border border-[#C6C6C8]/40 dark:border-[#38383A]/60 text-xs font-medium text-black dark:text-white focus:outline-none focus:border-[#FA2D48] shadow-xs cursor-pointer"
             >
               <option value="recent">Recently Added</option>
               <option value="title">Title</option>
@@ -173,10 +173,10 @@ export const DownloadsView: React.FC<DownloadsViewProps> = ({
 
       {/* Clear Confirmation Modal */}
       {showConfirmClear && (
-        <div className="p-5 rounded-2xl bg-red-50 border border-red-200 text-red-800 text-xs font-medium flex flex-col sm:flex-row items-center justify-between gap-4 animate-in fade-in">
+        <div className="p-4 rounded-[16px] bg-[#FA2D48]/10 border border-[#FA2D48]/30 text-black dark:text-white text-xs font-medium flex flex-col sm:flex-row items-center justify-between gap-4 animate-in fade-in">
           <div className="flex items-center gap-3">
-            <ShieldAlert className="w-5 h-5 text-red-600 shrink-0" />
-            <span>Are you sure you want to delete all {downloadedSongs.length} downloaded audio files from local storage?</span>
+            <ShieldAlert className="w-5 h-5 text-[#FA2D48] shrink-0" />
+            <span>Are you sure you want to delete all {downloadedSongs.length} downloaded tracks?</span>
           </div>
           <div className="flex items-center gap-2">
             <button
@@ -184,13 +184,13 @@ export const DownloadsView: React.FC<DownloadsViewProps> = ({
                 onClearAllDownloads();
                 setShowConfirmClear(false);
               }}
-              className="px-4 py-2 rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold text-xs shadow-xs"
+              className="px-4 py-2 rounded-full bg-[#FA2D48] hover:bg-[#FC3C44] text-white font-semibold text-xs shadow-xs cursor-pointer"
             >
               Yes, Delete All
             </button>
             <button
               onClick={() => setShowConfirmClear(false)}
-              className="px-3.5 py-2 rounded-xl bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 text-xs font-bold"
+              className="px-3.5 py-2 rounded-full bg-black/5 dark:bg-white/10 text-black dark:text-white text-xs font-semibold cursor-pointer"
             >
               Cancel
             </button>
@@ -200,19 +200,19 @@ export const DownloadsView: React.FC<DownloadsViewProps> = ({
 
       {/* Downloaded Songs List */}
       {downloadedSongs.length === 0 ? (
-        <div className="py-16 text-center space-y-4 bg-white dark:bg-slate-900 rounded-3xl border border-slate-200/90 dark:border-slate-800 max-w-lg mx-auto p-8 shadow-xs">
-          <div className="w-16 h-16 rounded-3xl bg-emerald-50 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 flex items-center justify-center mx-auto border border-emerald-200/80 dark:border-emerald-500/30">
+        <div className="py-16 text-center space-y-4 bg-[#FFFFFF] dark:bg-[#1C1C1E] rounded-[20px] border border-[#C6C6C8]/40 dark:border-[#38383A]/60 max-w-lg mx-auto p-8 shadow-xs">
+          <div className="w-16 h-16 rounded-full bg-[#34C759]/10 text-[#34C759] flex items-center justify-center mx-auto">
             <Download className="w-8 h-8" />
           </div>
           <div className="space-y-1">
-            <h3 className="text-lg font-extrabold text-slate-900 dark:text-white">No Offline Downloads Yet</h3>
-            <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed font-medium max-w-sm mx-auto">
-              Click the download icon <Download className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 inline mx-0.5" /> on any song to save complete audio files directly into local storage for offline playback anytime.
+            <h3 className="text-lg font-bold text-black dark:text-white">No Downloads Yet</h3>
+            <p className="text-xs text-[#3C3C43]/70 dark:text-[#8E8E93] leading-relaxed max-w-sm mx-auto">
+              Click the download icon on any song to save it for offline listening.
             </p>
           </div>
         </div>
       ) : songList.length === 0 ? (
-        <div className="py-12 text-center text-xs text-slate-500 dark:text-slate-400">
+        <div className="py-12 text-center text-xs text-[#8E8E93]">
           No downloaded songs match "{searchQuery}"
         </div>
       ) : (
@@ -238,4 +238,5 @@ export const DownloadsView: React.FC<DownloadsViewProps> = ({
     </div>
   );
 };
+
 

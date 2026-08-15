@@ -64,61 +64,61 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
         setDeferredPrompt(null);
       }
     } else {
-      alert('To install FREE MUSIC on Android:\n1. Tap your browser menu (⋮)\n2. Select "Add to Home screen" or "Install App"');
+      alert('To install FREE MUSIC on your device:\n1. Tap Share or browser menu (⋮)\n2. Select "Add to Home Screen"');
     }
   };
 
   const pageTitles: Partial<Record<TabType, { title: string; subtitle: string }>> = {
-    home: { title: 'DISCOVER', subtitle: 'Global Hits & AI Mixes' },
-    search: { title: 'SEARCH', subtitle: 'Millions of Songs & Artists' },
-    downloads: { title: 'OFFLINE DECK', subtitle: 'Saved Tracks • No Internet Needed' },
-    favorites: { title: 'LIKED TRACKS', subtitle: 'Your Personal Collection' },
-    history: { title: 'HISTORY', subtitle: 'Recent Searches & Plays' },
-    dashboard: { title: 'ADMIN PORTAL', subtitle: 'Telemetry & Cloud Logs' },
-    playlists: { title: 'PLAYLISTS', subtitle: 'Custom Curations' },
-    account: { title: 'ACCOUNT', subtitle: 'User Settings' },
-    login: { title: 'SIGN IN', subtitle: 'Access Profile' },
-    signup: { title: 'REGISTER', subtitle: 'Create Account' },
+    home: { title: 'Listen Now', subtitle: 'Top Picks & New Releases' },
+    search: { title: 'Search', subtitle: 'Songs, Artists & Playlists' },
+    downloads: { title: 'Library', subtitle: 'Downloaded & Offline Music' },
+    favorites: { title: 'Liked Tracks', subtitle: 'Your Favorites' },
+    history: { title: 'Recently Played', subtitle: 'Recent Activity' },
+    dashboard: { title: 'Admin Portal', subtitle: 'System & Analytics' },
+    playlists: { title: 'Playlists', subtitle: 'Curated Mixes' },
+    account: { title: 'Account', subtitle: 'Settings' },
+    login: { title: 'Sign In', subtitle: 'Apple Music Profile' },
+    signup: { title: 'Sign Up', subtitle: 'Create Profile' },
   };
 
-  const currentMeta = pageTitles[currentTab] || { title: 'FREE MUSIC', subtitle: 'Unlimited High-Fidelity Audio' };
+  const currentMeta = pageTitles[currentTab] || { title: 'Music', subtitle: 'High-Fidelity Audio' };
 
   return (
-    <header className="sticky top-0 z-30 bg-white/70 dark:bg-slate-950/75 backdrop-blur-2xl border-b border-slate-200/80 dark:border-slate-800/80 px-4 sm:px-6 md:px-8 py-3 flex items-center justify-between gap-3 shadow-xs transition-colors duration-300">
+    <header className="sticky top-0 z-30 bg-[#FFFFFF]/85 dark:bg-[#000000]/85 backdrop-blur-2xl border-b border-[#C6C6C8]/40 dark:border-[#38383A]/60 px-4 sm:px-6 md:px-8 py-3 flex items-center justify-between gap-3 select-none transition-colors duration-300">
       {/* Brand & Page Info */}
       <div className="flex items-center gap-3 min-w-0">
         <div
-          className="flex items-center gap-3 cursor-pointer group select-none"
+          className="flex items-center gap-2.5 cursor-pointer group"
           onClick={() => onTabChange('home')}
         >
-          <div className="relative w-10 h-10 rounded-2xl bg-gradient-to-br from-amber-400 via-amber-500 to-amber-600 text-slate-950 flex items-center justify-center font-black shadow-lg shadow-amber-500/25 group-hover:scale-105 transition-transform">
+          <div className="relative w-9 h-9 rounded-[10px] bg-gradient-to-tr from-[#FA2D48] to-[#FC3C44] text-white flex items-center justify-center shadow-md shadow-[#FA2D48]/25 group-hover:scale-105 transition-transform">
             <Music className="w-5 h-5 fill-current" />
             {isOffline && (
-              <span className="absolute -top-1 -right-1 w-3 h-3 rounded-full bg-rose-500 border-2 border-white dark:border-slate-950" />
+              <span className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-[#FA2D48] border-2 border-white dark:border-black" />
             )}
           </div>
           <div className="flex flex-col min-w-0">
-            <div className="flex items-center gap-2">
-              <span className="font-black text-base sm:text-lg tracking-tighter text-slate-900 dark:text-white leading-none">
-                FREE MUSIC
+            <div className="flex items-center gap-1.5">
+              <span className="font-bold text-base sm:text-lg tracking-tight text-black dark:text-white leading-none">
+                Music
               </span>
-              <span className="hidden xs:inline-flex items-center px-1.5 py-0.5 rounded-md bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30 text-[9px] font-black tracking-widest uppercase">
-                320K
+              <span className="inline-flex items-center px-1.5 py-0.2 rounded-full bg-[#FA2D48]/10 text-[#FA2D48] text-[9px] font-bold tracking-wide uppercase">
+                Free
               </span>
             </div>
-            <span className="text-[9px] font-black tracking-widest text-slate-400 dark:text-slate-500 uppercase mt-0.5 truncate">
-              BY SURAJ KHANDAGALE
+            <span className="text-[10px] font-medium tracking-wide text-[#3C3C43]/60 dark:text-[#EBEBF5]/60 truncate">
+              Apple Music Design
             </span>
           </div>
         </div>
 
-        {/* Desktop Page Title Divider */}
-        <div className="hidden lg:flex items-center gap-3 pl-4 border-l border-slate-200 dark:border-slate-800">
+        {/* Desktop Page Title */}
+        <div className="hidden lg:flex items-center gap-3 pl-4 border-l border-[#C6C6C8]/40 dark:border-[#38383A]/60">
           <div className="flex flex-col">
-            <span className="text-xs font-black tracking-wider text-slate-900 dark:text-slate-100 uppercase">
+            <span className="text-xs font-bold tracking-tight text-black dark:text-white">
               {currentMeta.title}
             </span>
-            <span className="text-[10px] font-semibold text-slate-400 dark:text-slate-500">
+            <span className="text-[10px] font-medium text-[#3C3C43]/60 dark:text-[#EBEBF5]/60">
               {currentMeta.subtitle}
             </span>
           </div>
@@ -127,47 +127,47 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
 
       {/* Right Controls */}
       <div className="flex items-center gap-2 shrink-0">
-        {/* Offline / Flight Mode Indicator Pill */}
+        {/* Offline Indicator Pill */}
         {isOffline ? (
           <button
             onClick={() => onTabChange('downloads')}
-            title="Flight Mode Active — Click to view Offline Deck"
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-rose-500/10 dark:bg-rose-500/20 text-rose-600 dark:text-rose-400 border border-rose-500/30 text-xs font-bold transition shadow-xs animate-pulse cursor-pointer"
+            title="Flight Mode Active — Click to view Library"
+            className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#FA2D48]/10 text-[#FA2D48] text-xs font-semibold transition cursor-pointer"
           >
             <WifiOff className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">Offline Mode</span>
+            <span className="hidden sm:inline">Offline</span>
           </button>
         ) : (
-          <div className="hidden md:flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 text-[10px] font-black uppercase tracking-wider">
+          <div className="hidden md:flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#34C759]/10 text-[#34C759] text-[10px] font-bold tracking-wide">
             <Radio className="w-3 h-3 animate-pulse" />
-            <span>Live Stream</span>
+            <span>Lossless Stream</span>
           </div>
         )}
 
-        {/* Install Android PWA App Button */}
+        {/* Install Button */}
         {!isInstalled && (
           <button
             onClick={handleInstallClick}
             aria-label="Install App"
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-700 dark:text-amber-400 border border-amber-500/30 text-xs font-bold transition shadow-xs cursor-pointer"
+            className="flex items-center gap-1.5 px-2.5 py-1 rounded-[10px] bg-[#F2F2F7] dark:bg-[#1C1C1E] hover:bg-[#E5E5EA] dark:hover:bg-[#2C2C2E] text-black dark:text-white border border-[#C6C6C8]/40 dark:border-[#38383A]/60 text-xs font-medium transition cursor-pointer"
           >
-            <Smartphone className="w-3.5 h-3.5 text-amber-500 shrink-0" />
+            <Smartphone className="w-3.5 h-3.5 text-[#FA2D48] shrink-0" />
             <span className="hidden sm:inline">Install</span>
           </button>
         )}
 
-        {/* Admin Dashboard Portal Button */}
+        {/* Admin Portal Button */}
         <button
           onClick={() => onTabChange('dashboard')}
           aria-label="Admin Dashboard"
           title="Admin Dashboard Portal"
-          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-bold transition shadow-xs cursor-pointer ${
+          className={`flex items-center gap-1.5 px-2.5 py-1 rounded-[10px] border text-xs font-medium transition cursor-pointer ${
             isAdmin
-              ? 'bg-amber-500 text-slate-950 border-amber-500 hover:bg-amber-400'
-              : 'bg-slate-100 dark:bg-slate-900 text-slate-700 dark:text-slate-300 border-slate-200/80 dark:border-slate-800 hover:bg-slate-200 dark:hover:bg-slate-800'
+              ? 'bg-[#FA2D48] text-white border-[#FA2D48]'
+              : 'bg-[#F2F2F7] dark:bg-[#1C1C1E] text-black dark:text-white border-[#C6C6C8]/40 dark:border-[#38383A]/60 hover:bg-[#E5E5EA] dark:hover:bg-[#2C2C2E]'
           }`}
         >
-          <ShieldCheck className={`w-3.5 h-3.5 shrink-0 ${isAdmin ? 'text-slate-950' : 'text-amber-500'}`} />
+          <ShieldCheck className={`w-3.5 h-3.5 shrink-0 ${isAdmin ? 'text-white' : 'text-[#FA2D48]'}`} />
           <span className="hidden sm:inline">{isAdmin ? 'Dashboard' : 'Admin'}</span>
         </button>
 
@@ -175,15 +175,16 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
         <button
           onClick={onToggleTheme}
           aria-label={`Switch to ${theme === 'dark' ? 'Light' : 'Dark'} mode`}
-          className="flex items-center justify-center w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-slate-100 dark:bg-slate-900 hover:bg-slate-200 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 transition shadow-xs cursor-pointer border border-slate-200/80 dark:border-slate-800"
+          className="flex items-center justify-center w-8 h-8 rounded-[10px] bg-[#F2F2F7] dark:bg-[#1C1C1E] hover:bg-[#E5E5EA] dark:hover:bg-[#2C2C2E] text-[#1C1C1E] dark:text-[#E5E5EA] transition cursor-pointer border border-[#C6C6C8]/40 dark:border-[#38383A]/60"
         >
           {theme === 'dark' ? (
-            <Sun className="w-4 h-4 text-amber-400 fill-amber-400/20" />
+            <Sun className="w-4 h-4 text-[#D4A857] fill-[#D4A857]/20" />
           ) : (
-            <Moon className="w-4 h-4 text-slate-600 fill-slate-600/20" />
+            <Moon className="w-4 h-4 text-[#3C3C43]" />
           )}
         </button>
       </div>
     </header>
   );
 };
+

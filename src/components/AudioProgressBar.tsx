@@ -44,14 +44,14 @@ export const AudioProgressBar: React.FC<AudioProgressBarProps> = ({
   const isDark = variant === 'dark';
 
   return (
-    <div className={`w-full flex items-center gap-2 text-[11px] select-none font-mono ${className}`}>
+    <div className={`w-full flex items-center gap-2 text-[11px] select-none ${className}`}>
       {/* Current Time */}
-      <span className={`w-8 text-right font-semibold shrink-0 ${isDark ? 'text-slate-300/80' : 'text-slate-600'}`}>
+      <span className={`w-8 text-right font-medium shrink-0 ${isDark ? 'text-white/70' : 'text-[#3C3C43]/70'}`}>
         {formatTime(currentTime)}
       </span>
 
-      {/* Interactive Floating Glass Waveform */}
-      <div className="relative flex-1 h-7 flex items-center group cursor-pointer">
+      {/* Interactive Floating Waveform */}
+      <div className="relative flex-1 h-6 flex items-center group cursor-pointer">
         {/* Waveform Bar Canvas */}
         <div className="w-full h-full flex items-center justify-between gap-[2px] px-0.5">
           {waveformHeights.map((heightPct, idx) => {
@@ -70,12 +70,12 @@ export const AudioProgressBar: React.FC<AudioProgressBarProps> = ({
                     animationDelay: animDelay,
                     animationPlayState: isPlaying && isPlayed ? 'running' : 'paused',
                   }}
-                  className={`w-full max-w-[3.5px] rounded-full transition-all duration-200 origin-center ${
+                  className={`w-full max-w-[3px] rounded-full transition-all duration-150 origin-center ${
                     isPlayed
-                      ? 'bg-amber-400 shadow-xs shadow-amber-400/40'
+                      ? 'bg-[#FA2D48]'
                       : isDark
                       ? 'bg-white/20 group-hover:bg-white/30'
-                      : 'bg-slate-200 group-hover:bg-slate-300'
+                      : 'bg-[#C6C6C8]/60 group-hover:bg-[#C6C6C8]'
                   } ${
                     isPlaying && isPlayed ? 'animate-wave-bar' : ''
                   }`}
@@ -88,11 +88,11 @@ export const AudioProgressBar: React.FC<AudioProgressBarProps> = ({
         {/* Subtle Bottom Progress Line Overlay */}
         <div
           className={`absolute inset-x-0 bottom-0 h-[2px] rounded-full overflow-hidden pointer-events-none ${
-            isDark ? 'bg-white/10' : 'bg-slate-200/80'
+            isDark ? 'bg-white/10' : 'bg-[#C6C6C8]/40'
           }`}
         >
           <div
-            className="h-full bg-gradient-to-r from-amber-500 to-amber-400 transition-all duration-100 ease-out"
+            className="h-full bg-[#FA2D48] transition-all duration-100 ease-out"
             style={{ width: `${progressPercent}%` }}
           />
         </div>
@@ -112,10 +112,11 @@ export const AudioProgressBar: React.FC<AudioProgressBarProps> = ({
       </div>
 
       {/* Total Duration */}
-      <span className={`w-8 text-left font-semibold shrink-0 ${isDark ? 'text-slate-300/80' : 'text-slate-600'}`}>
+      <span className={`w-8 text-left font-medium shrink-0 ${isDark ? 'text-white/70' : 'text-[#3C3C43]/70'}`}>
         {formatTime(duration)}
       </span>
     </div>
   );
 };
+
 

@@ -1,5 +1,35 @@
 @import "tailwindcss";
 
+@layer base {
+  :root {
+    --apple-red: #FA2D48;
+    --apple-coral: #FC3C44;
+    --apple-red-pressed: #D4213B;
+    --apple-canvas-light: #FFFFFF;
+    --apple-surface-1-light: #F2F2F7;
+    --apple-surface-2-light: #FFFFFF;
+    --apple-surface-3-light: #E5E5EA;
+    --apple-divider-light: #C6C6C8;
+    
+    --apple-canvas-dark: #000000;
+    --apple-surface-1-dark: #1C1C1E;
+    --apple-surface-2-dark: #2C2C2E;
+    --apple-surface-3-dark: #3A3A3C;
+    --apple-divider-dark: #38383A;
+    
+    --apple-atmos-gold: #D4A857;
+    --apple-lossless-silver: #8E8E93;
+    --apple-system-blue: #007AFF;
+    --apple-system-green: #34C759;
+  }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "SF Pro", "Helvetica Neue", Helvetica, Arial, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+}
+
 @keyframes waveBar {
   0%, 100% {
     transform: scaleY(0.35);
@@ -13,6 +43,34 @@
 
 .animate-wave-bar {
   animation: waveBar 1.2s ease-in-out infinite;
+}
+
+/* Apple Music 3-Bar Equalizer */
+@keyframes appleEq1 {
+  0%, 100% { height: 4px; }
+  50% { height: 16px; }
+}
+
+@keyframes appleEq2 {
+  0%, 100% { height: 14px; }
+  50% { height: 6px; }
+}
+
+@keyframes appleEq3 {
+  0%, 100% { height: 8px; }
+  50% { height: 16px; }
+}
+
+.animate-apple-eq-1 {
+  animation: appleEq1 0.75s ease-in-out infinite;
+}
+
+.animate-apple-eq-2 {
+  animation: appleEq2 0.85s ease-in-out infinite 0.15s;
+}
+
+.animate-apple-eq-3 {
+  animation: appleEq3 0.65s ease-in-out infinite 0.3s;
 }
 
 /* Dancing Baby Keyframe Animations */
@@ -76,3 +134,4 @@
   animation: babyHeadBob 0.75s ease-in-out infinite;
   transform-origin: 60px 70px;
 }
+

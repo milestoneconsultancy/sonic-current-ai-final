@@ -17,10 +17,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
   downloadsCount,
   isAdmin = false,
 }) => {
-  const mainNav: { id: TabType; label: string; icon: React.ElementType; badge?: number | null; badgeColor?: string }[] = [
-    { id: 'home', label: 'Discover', icon: Compass },
+  const mainNav: { id: TabType; label: string; icon: React.ElementType; badge?: number | null }[] = [
+    { id: 'home', label: 'Listen Now', icon: Compass },
     { id: 'search', label: 'Search', icon: Search },
-    { id: 'downloads', label: 'Offline Deck', icon: Download, badge: downloadsCount > 0 ? downloadsCount : null, badgeColor: 'bg-emerald-500 text-slate-950' },
+    { id: 'downloads', label: 'Library', icon: Download, badge: downloadsCount > 0 ? downloadsCount : null },
   ];
 
   if (isAdmin) {
@@ -29,39 +29,39 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
   const libraryNav: { id: TabType; label: string; icon: React.ElementType; badge?: number | null }[] = [
     { id: 'favorites', label: 'Liked Tracks', icon: Heart, badge: favoritesCount > 0 ? favoritesCount : null },
-    { id: 'history', label: 'Recent Plays', icon: History },
+    { id: 'history', label: 'Recently Played', icon: History },
   ];
 
   const isOffline = !navigator.onLine;
 
   return (
-    <aside className="hidden md:flex flex-col w-64 lg:w-72 border-r border-slate-200/80 dark:border-slate-800/80 bg-white/70 dark:bg-slate-950/80 backdrop-blur-3xl h-screen sticky top-0 shrink-0 select-none z-30 shadow-xs transition-colors duration-300">
+    <aside className="hidden md:flex flex-col w-64 lg:w-72 border-r border-[#C6C6C8]/40 dark:border-[#38383A]/60 bg-[#F2F2F7]/90 dark:bg-[#000000] backdrop-blur-3xl h-screen sticky top-0 shrink-0 select-none z-30 transition-colors duration-300">
       {/* Brand Header */}
-      <div className="p-6 pb-5 border-b border-slate-100 dark:border-slate-800/80">
+      <div className="p-6 pb-4 border-b border-[#C6C6C8]/30 dark:border-[#38383A]/50">
         <div
-          className="flex items-center gap-3.5 cursor-pointer group"
+          className="flex items-center gap-3 cursor-pointer group"
           onClick={() => onTabChange('home')}
         >
-          <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-amber-400 via-amber-500 to-amber-600 flex items-center justify-center text-slate-950 shadow-lg shadow-amber-500/25 group-hover:scale-105 transition-transform">
-            <Music2 className="w-6 h-6 fill-current text-slate-950" />
+          <div className="w-10 h-10 rounded-[11px] bg-gradient-to-tr from-[#FA2D48] to-[#FC3C44] flex items-center justify-center text-white shadow-md shadow-[#FA2D48]/25 group-hover:scale-105 transition-transform">
+            <Music2 className="w-5 h-5 fill-current text-white" />
           </div>
           <div className="flex flex-col">
-            <h1 className="font-black text-xl tracking-tighter text-slate-900 dark:text-white leading-none">
-              FREE MUSIC
+            <h1 className="font-bold text-lg tracking-tight text-black dark:text-white leading-none">
+              Music
             </h1>
-            <p className="text-[9px] font-black text-amber-600 dark:text-amber-400 tracking-widest uppercase mt-1">
-              BY SURAJ KHANDAGALE
+            <p className="text-[10px] font-semibold text-[#FA2D48] tracking-wider uppercase mt-1">
+              FREE MUSIC
             </p>
           </div>
         </div>
       </div>
 
       {/* Navigation Sections */}
-      <div className="px-4 py-5 space-y-6 flex-1 overflow-y-auto">
+      <div className="px-3 py-4 space-y-6 flex-1 overflow-y-auto">
         {/* Main Section */}
-        <div className="space-y-1">
-          <div className="px-3 pb-2 text-[10px] font-black tracking-widest text-slate-400 dark:text-slate-500 uppercase">
-            Browse
+        <div className="space-y-0.5">
+          <div className="px-3 pb-2 text-[11px] font-semibold tracking-wider text-[#3C3C43]/60 dark:text-[#EBEBF5]/60 uppercase">
+            Apple Music
           </div>
           {mainNav.map((item) => {
             const Icon = item.icon;
@@ -70,26 +70,26 @@ export const Sidebar: React.FC<SidebarProps> = ({
               <button
                 key={item.id}
                 onClick={() => onTabChange(item.id)}
-                className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-2xl font-bold text-sm transition-all duration-200 group cursor-pointer ${
+                className={`w-full flex items-center justify-between px-3 py-2 rounded-[10px] text-sm font-medium transition-all duration-150 group cursor-pointer ${
                   isActive
-                    ? 'bg-amber-500 text-slate-950 shadow-md shadow-amber-500/20 font-black'
-                    : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-900/90'
+                    ? 'bg-[#FA2D48] text-white font-semibold shadow-xs'
+                    : 'text-[#1C1C1E] dark:text-[#E5E5EA] hover:bg-black/5 dark:hover:bg-white/10'
                 }`}
               >
                 <div className="flex items-center gap-3">
                   <Icon
-                    className={`w-4 h-4 transition-transform duration-200 group-hover:scale-110 ${
-                      isActive ? 'text-slate-950' : 'text-slate-400 dark:text-slate-400'
+                    className={`w-4 h-4 transition-transform duration-150 ${
+                      isActive ? 'text-white stroke-[2.2]' : 'text-[#FA2D48] stroke-[1.8]'
                     }`}
                   />
                   <span>{item.label}</span>
                 </div>
                 {item.badge !== null && item.badge !== undefined && (
                   <span
-                    className={`text-[10px] font-black font-mono px-2 py-0.5 rounded-full ${
+                    className={`text-[11px] font-semibold px-2 py-0.5 rounded-full ${
                       isActive
-                        ? 'bg-slate-950 text-amber-400'
-                        : item.badgeColor || 'bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300'
+                        ? 'bg-white/20 text-white'
+                        : 'bg-[#E5E5EA] dark:bg-[#2C2C2E] text-[#3C3C43] dark:text-[#EBEBF5]'
                     }`}
                   >
                     {item.badge}
@@ -101,9 +101,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
         </div>
 
         {/* Library Section */}
-        <div className="space-y-1">
-          <div className="px-3 pb-2 text-[10px] font-black tracking-widest text-slate-400 dark:text-slate-500 uppercase">
-            Collection
+        <div className="space-y-0.5">
+          <div className="px-3 pb-2 text-[11px] font-semibold tracking-wider text-[#3C3C43]/60 dark:text-[#EBEBF5]/60 uppercase">
+            Library
           </div>
           {libraryNav.map((item) => {
             const Icon = item.icon;
@@ -112,22 +112,28 @@ export const Sidebar: React.FC<SidebarProps> = ({
               <button
                 key={item.id}
                 onClick={() => onTabChange(item.id)}
-                className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-2xl font-bold text-sm transition-all duration-200 group cursor-pointer ${
+                className={`w-full flex items-center justify-between px-3 py-2 rounded-[10px] text-sm font-medium transition-all duration-150 group cursor-pointer ${
                   isActive
-                    ? 'bg-slate-900 dark:bg-slate-800 text-white shadow-sm'
-                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-900/60'
+                    ? 'bg-[#FA2D48] text-white font-semibold shadow-xs'
+                    : 'text-[#1C1C1E] dark:text-[#E5E5EA] hover:bg-black/5 dark:hover:bg-white/10'
                 }`}
               >
                 <div className="flex items-center gap-3">
                   <Icon
-                    className={`w-4 h-4 transition-transform duration-200 group-hover:scale-110 ${
-                      isActive ? 'text-amber-400' : 'text-slate-400 dark:text-slate-500'
+                    className={`w-4 h-4 transition-transform duration-150 ${
+                      isActive ? 'text-white stroke-[2.2]' : 'text-[#FA2D48] stroke-[1.8]'
                     }`}
                   />
                   <span>{item.label}</span>
                 </div>
                 {item.badge !== null && item.badge !== undefined && (
-                  <span className="text-[10px] font-black font-mono px-2 py-0.5 rounded-full bg-slate-200/80 dark:bg-slate-800 text-slate-600 dark:text-slate-400">
+                  <span
+                    className={`text-[11px] font-semibold px-2 py-0.5 rounded-full ${
+                      isActive
+                        ? 'bg-white/20 text-white'
+                        : 'bg-[#E5E5EA] dark:bg-[#2C2C2E] text-[#3C3C43] dark:text-[#EBEBF5]'
+                    }`}
+                  >
                     {item.badge}
                   </span>
                 )}
@@ -140,36 +146,37 @@ export const Sidebar: React.FC<SidebarProps> = ({
         {isOffline && (
           <div
             onClick={() => onTabChange('downloads')}
-            className="p-3.5 rounded-2xl bg-rose-500/10 border border-rose-500/30 space-y-1.5 cursor-pointer hover:bg-rose-500/15 transition shadow-xs"
+            className="p-3.5 rounded-[12px] bg-[#FA2D48]/10 border border-[#FA2D48]/30 space-y-1 cursor-pointer hover:bg-[#FA2D48]/15 transition"
           >
-            <div className="flex items-center gap-2 text-xs font-black text-rose-600 dark:text-rose-400">
+            <div className="flex items-center gap-2 text-xs font-semibold text-[#FA2D48]">
               <WifiOff className="w-4 h-4" />
-              <span>Flight Mode Active</span>
+              <span>Offline Mode</span>
             </div>
-            <p className="text-[11px] text-slate-600 dark:text-slate-300 leading-snug">
-              Access your {downloadsCount} offline tracks in the Offline Deck.
+            <p className="text-[12px] text-[#3C3C43] dark:text-[#EBEBF5]/80 leading-snug">
+              Access your {downloadsCount} offline tracks in Library.
             </p>
           </div>
         )}
       </div>
 
-      {/* Bottom Audio Engine Card */}
-      <div className="mx-4 my-4 p-3.5 rounded-2xl bg-gradient-to-br from-amber-500/10 via-amber-500/5 to-transparent border border-amber-500/20 space-y-1">
-        <div className="flex items-center gap-2 text-xs font-black text-amber-700 dark:text-amber-400">
+      {/* Audio Engine Quality Badge Card */}
+      <div className="mx-3 my-3 p-3 rounded-[12px] bg-[#FFFFFF] dark:bg-[#1C1C1E] border border-[#C6C6C8]/40 dark:border-[#38383A]/60 space-y-1 shadow-xs">
+        <div className="flex items-center gap-1.5 text-xs font-semibold text-[#D4A857]">
           <Sparkles className="w-3.5 h-3.5 fill-current" />
-          <span>HD Lossless Engine</span>
+          <span>Lossless & Spatial Audio</span>
         </div>
-        <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-snug font-medium">
-          Instant IndexedDB caching with 320kbps full stream fidelity.
+        <p className="text-[11px] text-[#3C3C43]/70 dark:text-[#8E8E93] leading-snug">
+          High-resolution 24-bit / 48kHz audio streaming with instant offline caching.
         </p>
       </div>
 
       {/* Footer */}
-      <div className="p-4 border-t border-slate-100 dark:border-slate-800/80 bg-slate-50/50 dark:bg-slate-950/50 text-center">
-        <span className="text-[10px] font-black text-slate-400 dark:text-slate-500 tracking-widest uppercase">
-          FREE MUSIC • V3.2
+      <div className="p-3.5 border-t border-[#C6C6C8]/30 dark:border-[#38383A]/50 text-center">
+        <span className="text-[10px] font-medium text-[#3C3C43]/50 dark:text-[#8E8E93]/60 tracking-wider uppercase">
+          Apple Music Design • Free Stream
         </span>
       </div>
     </aside>
   );
 };
+
