@@ -88,7 +88,7 @@ export interface LyricsData {
   copyright?: string;
 }
 
-export type TabType = 'home' | 'search' | 'downloads' | 'dashboard' | 'history' | 'favorites' | 'playlists' | 'account' | 'login' | 'signup';
+export type TabType = 'home' | 'instantmix' | 'search' | 'downloads' | 'dashboard' | 'history' | 'favorites' | 'playlists' | 'account' | 'login' | 'signup';
 
 export type RepeatMode = 'off' | 'one' | 'all';
 

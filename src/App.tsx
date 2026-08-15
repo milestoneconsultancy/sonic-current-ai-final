@@ -46,6 +46,7 @@ import { QueueDrawer } from './components/QueueDrawer';
 
 import { HomeView } from './views/HomeView';
 import { SearchView } from './views/SearchView';
+import { InstantMixView } from './views/InstantMixView';
 import { HistoryView } from './views/HistoryView';
 import { FavoritesView } from './views/FavoritesView';
 import { DownloadsView } from './views/DownloadsView';
@@ -1227,7 +1228,7 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex flex-col md:flex-row antialiased font-sans selection:bg-amber-400 selection:text-slate-950 transition-colors duration-300">
+    <div className="min-h-screen bg-[#F2F2F7] dark:bg-[#000000] text-black dark:text-white flex flex-col md:flex-row antialiased font-sans selection:bg-[#FA2D48] selection:text-white transition-colors duration-200">
       {/* Desktop Navigation Sidebar */}
       <Sidebar
         currentTab={currentTab}
@@ -1240,8 +1241,8 @@ export default function App() {
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col min-w-0 pb-32">
         {isOffline && (
-          <div className="bg-amber-500/10 border-b border-amber-500/20 px-4 py-2 text-center text-xs font-semibold text-amber-800 dark:text-amber-300 flex items-center justify-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
+          <div className="bg-[#FF9500]/15 border-b border-[#FF9500]/25 px-4 py-2 text-center text-xs font-semibold text-black dark:text-white flex items-center justify-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-[#FF9500] animate-pulse" />
             <span>Offline Mode Active — Downloaded songs & offline queue ready</span>
           </div>
         )}
@@ -1299,6 +1300,22 @@ export default function App() {
               onDownloadSong={handleDownloadSong}
               onAddToQueue={handleAddToQueue}
               onAddAllToQueue={handleAddAllToQueue}
+            />
+          )}
+
+          {currentTab === 'instantmix' && (
+            <InstantMixView
+              currentSong={currentSong}
+              isPlaying={isPlaying}
+              favoritesSet={favoritesSet}
+              downloadedSet={downloadedSet}
+              downloadingSet={downloadingSet}
+              selectedLanguages={selectedLanguages}
+              onPlaySong={handlePlaySong}
+              onPlayAll={handlePlayAll}
+              onToggleFavorite={handleToggleFavoriteSong}
+              onDownloadSong={handleDownloadSong}
+              onAddToQueue={handleAddToQueue}
             />
           )}
 

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Search, Play, Plus, Grid, List, Music2, Sparkles, X, Clock, Mic, MicOff } from 'lucide-react';
+import { Search, Play, Plus, Grid, List, Music2, X, Mic } from 'lucide-react';
 import { Song } from '../types';
 import { SongListItem } from '../components/SongListItem';
 import { SongCard } from '../components/SongCard';
@@ -50,7 +50,7 @@ export const SearchView: React.FC<SearchViewProps> = ({
   onAddAllToQueue,
 }) => {
   const [typedQuery, setTypedQuery] = useState(searchQuery);
-  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('list');
   const [liveSuggestions, setLiveSuggestions] = useState<Song[]>([]);
   const [isLoadingSuggestions, setIsLoadingSuggestions] = useState(false);
   const [selectedIndex, setSelectedIndex] = useState<number>(-1);
@@ -72,7 +72,7 @@ export const SearchView: React.FC<SearchViewProps> = ({
 
     try {
       const recognition = new SpeechRecognition();
-      recognition.lang = 'en-IN'; // Works well for Indian accents, Hindi, Marathi, Hinglish
+      recognition.lang = 'en-IN';
       recognition.continuous = false;
       recognition.interimResults = false;
 
@@ -118,12 +118,10 @@ export const SearchView: React.FC<SearchViewProps> = ({
     }
   };
 
-  // Sync typed query with incoming searchQuery if changed externally
   useEffect(() => {
     setTypedQuery(searchQuery);
   }, [searchQuery]);
 
-  // Infinite Scroll IntersectionObserver
   useEffect(() => {
     if (!hasMoreResults || isLoadingMore || !onLoadMore || isSearching) return;
 
@@ -144,7 +142,6 @@ export const SearchView: React.FC<SearchViewProps> = ({
     };
   }, [hasMoreResults, isLoadingMore, onLoadMore, isSearching, searchResults.length]);
 
-  // Focus input automatically when Search view mounts / opens
   useEffect(() => {
     const timer = setTimeout(() => {
       inputRef.current?.focus();
@@ -152,7 +149,6 @@ export const SearchView: React.FC<SearchViewProps> = ({
     return () => clearTimeout(timer);
   }, []);
 
-  // Fetch live song suggestions on typing (debounced)
   useEffect(() => {
     const trimmed = typedQuery.trim();
     if (trimmed.length < 2 || !navigator.onLine) {
@@ -188,7 +184,6 @@ export const SearchView: React.FC<SearchViewProps> = ({
     return () => clearTimeout(timer);
   }, [typedQuery]);
 
-  // Handle outside click to hide suggestions
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
@@ -199,7 +194,6 @@ export const SearchView: React.FC<SearchViewProps> = ({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // Keyboard navigation for suggestions
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'ArrowDown') {
       if (liveSuggestions.length > 0) {
@@ -244,137 +238,135 @@ export const SearchView: React.FC<SearchViewProps> = ({
   };
 
   const popularQueries = [
-    'Kesariya',
     'Arijit Singh',
-    'Ganpati DJ',
-    'Marathi Hits',
+    'Kesariya',
     'Bollywood Top 20',
+    'Marathi Superhits',
     'Pritam',
     'Shreya Ghoshal',
-    'Badshah DJ',
+    'Punjabi Hits',
+    'Lo-Fi Acoustic',
   ];
 
   return (
-    <div className="space-y-6 pb-24">
-      {/* Immediate Focus Search Dialog Container */}
+    <div className="space-y-6 pb-28 animate-in fade-in duration-200">
+      {/* Title */}
+      <div>
+        <h1 className="text-3xl sm:text-4xl font-bold tracking-tight text-black dark:text-white">
+          Search
+        </h1>
+      </div>
+
+      {/* iOS Search Input Container */}
       <div ref={containerRef} className="relative z-30">
-        <div className="bg-[#FFFFFF] dark:bg-[#1C1C1E] p-4 sm:p-5 rounded-[20px] border border-[#C6C6C8]/40 dark:border-[#38383A]/60 shadow-xs">
-          <div className="relative flex items-center w-full rounded-[14px] bg-[#E5E5EA]/50 dark:bg-[#2C2C2E]/60 border border-transparent focus-within:border-[#FA2D48] focus-within:bg-[#FFFFFF] dark:focus-within:bg-[#1C1C1E] transition-all duration-200">
-            <Search className="w-4 h-4 text-[#8E8E93] ml-3.5 shrink-0" />
-            <input
-              ref={inputRef}
-              type="text"
-              value={typedQuery}
-              onFocus={() => {
-                if (liveSuggestions.length > 0) setShowSuggestions(true);
-              }}
-              onChange={(e) => {
-                setTypedQuery(e.target.value);
-              }}
-              onKeyDown={handleKeyDown}
-              placeholder="Artists, Songs, Lyrics, and More"
-              className="w-full bg-transparent px-3 py-3 text-sm font-medium text-black dark:text-white placeholder-[#8E8E93] focus:outline-none"
-            />
-            {isSearching || isLoadingSuggestions ? (
-              <div className="mr-3.5 w-4 h-4 rounded-full border-2 border-[#FA2D48] border-t-transparent animate-spin shrink-0" />
-            ) : typedQuery ? (
-              <button
-                onClick={handleClear}
-                className="mr-2 p-1.5 text-[#8E8E93] hover:text-black dark:hover:text-white rounded-full hover:bg-black/5 dark:hover:bg-white/10 transition cursor-pointer"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            ) : null}
-
-            {/* Voice Search Button */}
+        <div className="relative flex items-center w-full rounded-[12px] bg-[#E5E5EA]/80 dark:bg-[#1C1C1E] border border-transparent focus-within:border-[#FA2D48] transition-all duration-150">
+          <Search className="w-4 h-4 text-[#8E8E93] ml-3.5 shrink-0" />
+          <input
+            ref={inputRef}
+            type="text"
+            value={typedQuery}
+            onFocus={() => {
+              if (liveSuggestions.length > 0) setShowSuggestions(true);
+            }}
+            onChange={(e) => {
+              setTypedQuery(e.target.value);
+            }}
+            onKeyDown={handleKeyDown}
+            placeholder="Artists, Songs, Lyrics, and More"
+            className="w-full bg-transparent px-3 py-3 text-sm font-medium text-black dark:text-white placeholder-[#8E8E93] focus:outline-none"
+          />
+          {isSearching || isLoadingSuggestions ? (
+            <div className="mr-3.5 w-4 h-4 rounded-full border-2 border-[#FA2D48] border-t-transparent animate-spin shrink-0" />
+          ) : typedQuery ? (
             <button
-              onClick={handleVoiceSearch}
-              className={`mr-2 p-2 rounded-[10px] transition cursor-pointer flex items-center justify-center ${
-                isListening
-                  ? 'bg-[#FA2D48] text-white animate-bounce'
-                  : 'text-[#8E8E93] hover:text-[#FA2D48] hover:bg-[#FA2D48]/10'
-              }`}
-              title={isListening ? 'Listening...' : 'Voice Search'}
+              onClick={handleClear}
+              className="mr-2 p-1.5 text-[#8E8E93] hover:text-black dark:hover:text-white rounded-full hover:bg-black/5 dark:hover:bg-white/10 transition cursor-pointer"
             >
-              <Mic className="w-4 h-4" />
+              <X className="w-4 h-4" />
             </button>
+          ) : null}
 
-            <button
-              onClick={() => {
-                if (typedQuery.trim()) {
-                  setShowSuggestions(false);
-                  onSearchChange(typedQuery.trim());
-                }
-              }}
-              className="mr-2 px-3.5 py-1.5 rounded-full bg-[#FA2D48] hover:bg-[#FC3C44] text-white font-semibold text-xs shadow-xs transition cursor-pointer"
-            >
-              Search
-            </button>
-          </div>
+          {/* Voice Search Button */}
+          <button
+            onClick={handleVoiceSearch}
+            className={`mr-2 p-2 rounded-full transition cursor-pointer flex items-center justify-center ${
+              isListening
+                ? 'bg-[#FA2D48] text-white animate-pulse'
+                : 'text-[#8E8E93] hover:text-[#FA2D48]'
+            }`}
+            title={isListening ? 'Listening...' : 'Voice Search'}
+          >
+            <Mic className="w-4 h-4" />
+          </button>
 
-          {/* Live Song Suggestions Overlay */}
-          {showSuggestions && liveSuggestions.length > 0 && (
-            <div className="absolute top-full left-0 right-0 mt-2 p-2.5 rounded-[18px] bg-[#FFFFFF]/95 dark:bg-[#1C1C1E]/95 border border-[#C6C6C8]/50 dark:border-[#38383A]/70 shadow-[0_10px_30px_rgba(0,0,0,0.15)] backdrop-blur-2xl z-50 space-y-1 animate-in fade-in duration-150 max-h-96 overflow-y-auto">
-              <div className="flex items-center gap-1.5 text-[10px] font-semibold text-[#8E8E93] uppercase tracking-wider px-3 py-1.5">
-                <Sparkles className="w-3.5 h-3.5 text-[#FA2D48]" /> Suggestions
-              </div>
-
-              {liveSuggestions.map((song, idx) => (
-                <div
-                  key={`${song.id}_${idx}`}
-                  onClick={() => handleSelectSuggestion(song)}
-                  className={`flex items-center justify-between p-2.5 rounded-[12px] cursor-pointer transition group ${
-                    selectedIndex === idx
-                      ? 'bg-[#FA2D48]/10 text-[#FA2D48]'
-                      : 'hover:bg-black/5 dark:hover:bg-white/5 text-black dark:text-white'
-                  }`}
-                >
-                  <div className="flex items-center gap-3 min-w-0">
-                    <img
-                      src={song.artwork || 'https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=100&h=100&fit=crop'}
-                      alt={song.title}
-                      className="w-10 h-10 rounded-[8px] object-cover border border-[#C6C6C8]/40 dark:border-[#38383A]/60 shrink-0"
-                      onError={(e) => {
-                        (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=100&h=100&fit=crop';
-                      }}
-                    />
-                    <div className="min-w-0 flex flex-col">
-                      <span className="font-semibold text-xs text-black dark:text-white truncate group-hover:text-[#FA2D48] transition-colors">
-                        {song.title}
-                      </span>
-                      <span className="text-[11px] font-normal text-[#8E8E93] truncate">
-                        {song.artist}
-                      </span>
-                    </div>
-                  </div>
-
-                  <button className="px-3 py-1 rounded-full bg-[#FA2D48] text-white font-semibold text-xs flex items-center gap-1 shrink-0 ml-2 cursor-pointer">
-                    <Play className="w-2.5 h-2.5 fill-current" /> Play
-                  </button>
-                </div>
-              ))}
-            </div>
-          )}
+          <button
+            onClick={() => {
+              if (typedQuery.trim()) {
+                setShowSuggestions(false);
+                onSearchChange(typedQuery.trim());
+              }
+            }}
+            className="mr-2 px-3.5 py-1.5 rounded-[8px] bg-[#FA2D48] hover:bg-[#FC3C44] text-white font-semibold text-xs transition cursor-pointer"
+          >
+            Search
+          </button>
         </div>
+
+        {/* Live Song Suggestions Dropdown */}
+        {showSuggestions && liveSuggestions.length > 0 && (
+          <div className="absolute top-full left-0 right-0 mt-2 p-2 rounded-[14px] bg-white/95 dark:bg-[#1C1C1E]/95 border border-[#C6C6C8]/40 dark:border-[#38383A]/60 shadow-2xl backdrop-blur-xl z-50 space-y-1 animate-in fade-in duration-150 max-h-96 overflow-y-auto">
+            <div className="text-xs font-semibold text-[#8E8E93] uppercase tracking-wider px-3 py-1.5">
+              Suggestions
+            </div>
+
+            {liveSuggestions.map((song, idx) => (
+              <div
+                key={`${song.id}_${idx}`}
+                onClick={() => handleSelectSuggestion(song)}
+                className={`flex items-center justify-between p-2 rounded-[10px] cursor-pointer transition ${
+                  selectedIndex === idx
+                    ? 'bg-[#FA2D48]/15 text-[#FA2D48]'
+                    : 'hover:bg-[#F2F2F7] dark:hover:bg-[#2C2C2E]/60 text-black dark:text-white'
+                }`}
+              >
+                <div className="flex items-center gap-3 min-w-0">
+                  <img
+                    src={song.artwork || 'https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=100&h=100&fit=crop'}
+                    alt={song.title}
+                    className="w-10 h-10 rounded-[8px] object-cover bg-[#E5E5EA] dark:bg-[#2C2C2E] shrink-0 shadow-2xs"
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=100&h=100&fit=crop';
+                    }}
+                  />
+                  <div className="min-w-0 flex flex-col">
+                    <span className="font-semibold text-xs truncate">
+                      {song.title}
+                    </span>
+                    <span className="text-xs text-[#8E8E93] truncate">
+                      {song.artist}
+                    </span>
+                  </div>
+                </div>
+
+                <button className="px-3 py-1 rounded-full bg-[#FA2D48] hover:bg-[#FC3C44] text-white font-semibold text-xs flex items-center gap-1 shrink-0 ml-2 cursor-pointer">
+                  <Play className="w-2.5 h-2.5 fill-current" /> Play
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Header Bar Controls for Results */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-2 border-b border-[#C6C6C8]/30 dark:border-[#38383A]/50">
         <div>
-          <h2 className="text-xl sm:text-2xl font-bold text-black dark:text-white tracking-tight flex items-center gap-2">
-            <Search className="w-5 h-5 text-[#FA2D48]" />
-            {searchQuery.trim() ? `Results for "${searchQuery.trim()}"` : 'Explore Music'}
+          <h2 className="text-lg sm:text-xl font-bold text-black dark:text-white tracking-tight">
+            {searchQuery.trim() ? `Results for "${searchQuery.trim()}"` : 'Top Results'}
           </h2>
-          <div className="flex items-center gap-2 flex-wrap mt-1">
-            <p className="text-xs text-[#3C3C43]/70 dark:text-[#8E8E93] font-normal">
-              {searchResults.length > 0 ? `${searchResults.length} songs` : 'Search songs, artists, albums, or genres'}
+          <div className="flex items-center gap-2 flex-wrap mt-0.5">
+            <p className="text-xs text-[#8E8E93]">
+              {searchResults.length > 0 ? `${searchResults.length} tracks found` : 'Search across all tracks & artists'}
             </p>
-            {activeContextQuery && searchQuery.trim() && (
-              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-[#FA2D48]/10 text-[#FA2D48] text-[11px] font-semibold">
-                <Sparkles className="w-3 h-3 text-[#FA2D48] shrink-0" />
-                {activeContextQuery}
-              </span>
-            )}
           </div>
         </div>
 
@@ -384,13 +376,13 @@ export const SearchView: React.FC<SearchViewProps> = ({
             <>
               <button
                 onClick={() => onPlayAll(searchResults)}
-                className="px-4 py-2 rounded-full bg-[#FA2D48] hover:bg-[#FC3C44] text-white font-semibold text-xs flex items-center gap-1.5 shadow-xs transition cursor-pointer"
+                className="px-3.5 py-1.5 rounded-full bg-[#FA2D48] hover:bg-[#FC3C44] text-white font-semibold text-xs flex items-center gap-1.5 transition cursor-pointer"
               >
                 <Play className="w-3.5 h-3.5 fill-current" /> Play All
               </button>
               <button
                 onClick={() => onAddAllToQueue(searchResults)}
-                className="px-3.5 py-2 rounded-full bg-black/5 dark:bg-white/10 hover:bg-black/10 dark:hover:bg-white/15 text-black dark:text-white font-semibold text-xs flex items-center gap-1.5 transition cursor-pointer"
+                className="px-3.5 py-1.5 rounded-full bg-[#F2F2F7] dark:bg-[#1C1C1E] hover:bg-[#E5E5EA] dark:hover:bg-[#2C2C2E] text-black dark:text-white font-medium text-xs flex items-center gap-1.5 transition cursor-pointer"
               >
                 <Plus className="w-3.5 h-3.5" /> Queue All
               </button>
@@ -398,16 +390,20 @@ export const SearchView: React.FC<SearchViewProps> = ({
           )}
 
           {/* View Mode Toggle */}
-          <div className="flex items-center p-0.5 rounded-[10px] bg-[#E5E5EA]/70 dark:bg-[#2C2C2E] border border-[#C6C6C8]/40 dark:border-[#38383A]/60 text-[#8E8E93]">
+          <div className="flex items-center p-0.5 rounded-[8px] bg-[#E5E5EA] dark:bg-[#1C1C1E] text-[#8E8E93]">
             <button
               onClick={() => setViewMode('list')}
-              className={`p-1.5 rounded-[8px] transition cursor-pointer ${viewMode === 'list' ? 'bg-white dark:bg-[#1C1C1E] text-black dark:text-white shadow-xs' : 'hover:text-black dark:hover:text-white'}`}
+              className={`p-1.5 rounded-[6px] transition cursor-pointer ${
+                viewMode === 'list' ? 'bg-white dark:bg-[#2C2C2E] text-black dark:text-white shadow-2xs' : 'hover:text-black dark:hover:text-white'
+              }`}
             >
               <List className="w-3.5 h-3.5" />
             </button>
             <button
               onClick={() => setViewMode('grid')}
-              className={`p-1.5 rounded-[8px] transition cursor-pointer ${viewMode === 'grid' ? 'bg-white dark:bg-[#1C1C1E] text-black dark:text-white shadow-xs' : 'hover:text-black dark:hover:text-white'}`}
+              className={`p-1.5 rounded-[6px] transition cursor-pointer ${
+                viewMode === 'grid' ? 'bg-white dark:bg-[#2C2C2E] text-black dark:text-white shadow-2xs' : 'hover:text-black dark:hover:text-white'
+              }`}
             >
               <Grid className="w-3.5 h-3.5" />
             </button>
@@ -417,16 +413,16 @@ export const SearchView: React.FC<SearchViewProps> = ({
 
       {/* Error Message */}
       {searchError && (
-        <div className="p-4 rounded-[14px] bg-[#FA2D48]/10 border border-[#FA2D48]/30 text-black dark:text-white text-xs font-medium flex items-center justify-between">
-          <span>{searchError}</span>
+        <div className="p-3.5 rounded-[12px] bg-[#FF3B30]/10 text-[#FF3B30] text-xs font-medium">
+          {searchError}
         </div>
       )}
 
       {/* Loading State */}
       {isSearching && (
         <div className="py-20 flex flex-col items-center justify-center space-y-3">
-          <div className="w-8 h-8 rounded-full border-2 border-[#FA2D48] border-t-transparent animate-spin" />
-          <p className="text-xs text-[#8E8E93]">Searching Apple Music catalog...</p>
+          <div className="w-7 h-7 rounded-full border-2 border-[#FA2D48] border-t-transparent animate-spin" />
+          <p className="text-xs text-[#8E8E93]">Searching Catalog...</p>
         </div>
       )}
 
@@ -434,7 +430,7 @@ export const SearchView: React.FC<SearchViewProps> = ({
       {!isSearching && searchResults.length > 0 && (
         <div className="space-y-6">
           {viewMode === 'list' ? (
-            <div className="space-y-2">
+            <div className="space-y-1">
               {searchResults.map((song, idx) => (
                 <SongListItem
                   key={`${song.id}_${idx}`}
@@ -471,16 +467,16 @@ export const SearchView: React.FC<SearchViewProps> = ({
             </div>
           )}
 
-          {/* Infinite Scroll Sentinel & Progressive Loading Indicator */}
+          {/* Infinite Scroll Sentinel */}
           <div ref={sentinelRef} className="pt-6 pb-2 flex flex-col items-center justify-center text-center">
             {isLoadingMore && (
-              <div className="flex items-center gap-2.5 py-2.5 px-4 rounded-full bg-[#FFFFFF] dark:bg-[#1C1C1E] border border-[#C6C6C8]/40 dark:border-[#38383A]/60 text-xs font-semibold text-black dark:text-white shadow-xs">
+              <div className="flex items-center gap-2 py-2 px-3 rounded-full bg-[#F2F2F7] dark:bg-[#1C1C1E] text-xs font-semibold text-black dark:text-white">
                 <div className="w-3.5 h-3.5 rounded-full border-2 border-[#FA2D48] border-t-transparent animate-spin" />
-                <span>Loading more songs…</span>
+                <span>Loading more tracks…</span>
               </div>
             )}
             {!hasMoreResults && searchResults.length > 0 && !isLoadingMore && (
-              <p className="text-xs font-medium text-[#8E8E93] py-2">
+              <p className="text-xs text-[#8E8E93] py-2">
                 You've reached the end of results.
               </p>
             )}
@@ -490,20 +486,20 @@ export const SearchView: React.FC<SearchViewProps> = ({
 
       {/* Empty / Welcome Search Prompt State */}
       {!isSearching && searchResults.length === 0 && (
-        <div className="py-12 px-6 rounded-[20px] bg-[#FFFFFF] dark:bg-[#1C1C1E] border border-[#C6C6C8]/40 dark:border-[#38383A]/60 text-center space-y-6 max-w-2xl mx-auto shadow-xs">
-          <div className="w-16 h-16 rounded-full bg-[#FA2D48]/10 flex items-center justify-center mx-auto text-[#FA2D48]">
-            <Music2 className="w-8 h-8" />
+        <div className="py-12 px-6 rounded-[16px] bg-[#F2F2F7] dark:bg-[#1C1C1E] text-center space-y-5 max-w-xl mx-auto">
+          <div className="w-14 h-14 rounded-full bg-[#E5E5EA] dark:bg-[#2C2C2E] flex items-center justify-center mx-auto text-[#FA2D48]">
+            <Music2 className="w-7 h-7" />
           </div>
 
           <div className="space-y-1">
-            <h3 className="text-2xl font-bold text-black dark:text-white tracking-tight">Search Apple Music</h3>
-            <p className="text-xs text-[#3C3C43]/70 dark:text-[#8E8E93] max-w-md mx-auto leading-relaxed font-normal pt-1">
-              Find any song, artist, album, or soundtrack to start listening immediately.
+            <h3 className="text-xl font-bold text-black dark:text-white tracking-tight">Explore Free Music</h3>
+            <p className="text-xs text-[#8E8E93] max-w-sm mx-auto leading-relaxed">
+              Find any Indian or international song, artist, album, or acoustic vibe.
             </p>
           </div>
 
           <div>
-            <span className="text-[10px] font-semibold uppercase tracking-wider text-[#8E8E93] mb-3 block">
+            <span className="text-xs font-semibold uppercase tracking-wider text-[#8E8E93] mb-3 block">
               Trending Searches
             </span>
             <div className="flex flex-wrap justify-center gap-2">
@@ -514,7 +510,7 @@ export const SearchView: React.FC<SearchViewProps> = ({
                     setTypedQuery(query);
                     onSearchChange(query);
                   }}
-                  className="px-3.5 py-1.5 rounded-full bg-black/5 dark:bg-white/10 hover:bg-[#FA2D48] hover:text-white text-xs font-semibold text-black dark:text-white transition shadow-2xs cursor-pointer"
+                  className="px-3.5 py-1.5 rounded-full bg-white dark:bg-[#2C2C2E] hover:bg-[#FA2D48] hover:text-white text-xs font-medium text-black dark:text-white transition shadow-2xs cursor-pointer"
                 >
                   {query}
                 </button>

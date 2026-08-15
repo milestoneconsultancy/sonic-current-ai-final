@@ -66,29 +66,25 @@ export const AccountView: React.FC<AccountViewProps> = ({
   };
 
   return (
-    <div className="max-w-3xl mx-auto space-y-8 py-4">
+    <div className="max-w-3xl mx-auto space-y-6 py-2 pb-24 animate-in fade-in duration-200">
       {/* Header Profile Banner */}
-      <div className="bg-gradient-to-br from-amber-500 via-amber-600 to-amber-700 text-slate-950 p-6 sm:p-8 rounded-3xl shadow-xl relative overflow-hidden">
-        <div className="absolute right-0 top-0 opacity-10 translate-x-8 -translate-y-8 select-none pointer-events-none text-9xl font-black">
-          ⚡
-        </div>
-
+      <div className="bg-[#FFFFFF] dark:bg-[#1C1C1E] text-black dark:text-white p-6 sm:p-7 rounded-[20px] border border-[#C6C6C8]/40 dark:border-[#38383A]/60 shadow-xs relative overflow-hidden">
         <div className="relative z-10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
           <div className="flex items-center gap-4">
-            <div className="w-16 h-16 rounded-2xl bg-slate-950 text-amber-500 flex items-center justify-center font-black text-2xl shadow-lg border-2 border-amber-300/40">
-              {user?.displayName ? user.displayName[0].toUpperCase() : user?.email ? user.email[0].toUpperCase() : 'G'}
+            <div className="w-16 h-16 rounded-full bg-[#FA2D48] text-white flex items-center justify-center font-bold text-2xl shadow-xs">
+              {user?.displayName ? user.displayName[0].toUpperCase() : user?.email ? user.email[0].toUpperCase() : 'A'}
             </div>
             <div className="space-y-1">
               <div className="flex items-center gap-2">
-                <h1 className="text-xl font-black text-slate-950 tracking-tight">
-                  {user?.displayName || 'Guest User'}
+                <h1 className="text-xl font-bold text-black dark:text-white tracking-tight">
+                  {user?.displayName || 'Free Music User'}
                 </h1>
-                <span className="px-2.5 py-0.5 rounded-full bg-slate-950 text-amber-400 text-[10px] font-black uppercase tracking-wider">
-                  {user ? 'Verified Account' : 'Guest Mode'}
+                <span className="px-2.5 py-0.5 rounded-full bg-[#FA2D48]/10 text-[#FA2D48] text-[10px] font-bold uppercase tracking-wider">
+                  {user ? 'Subscriber' : 'Free Member'}
                 </span>
               </div>
-              <p className="text-xs font-bold text-slate-900/80">
-                {user?.email || 'Listening as Guest • Sign in to enable cross-device cloud sync'}
+              <p className="text-xs text-[#3C3C43]/70 dark:text-[#8E8E93] font-normal">
+                {user?.email || 'Listening in Free Mode • Designed by Suraj Khandagale'}
               </p>
             </div>
           </div>
@@ -96,9 +92,9 @@ export const AccountView: React.FC<AccountViewProps> = ({
           {user && (
             <button
               onClick={handleSignOut}
-              className="px-4 py-2.5 rounded-2xl bg-slate-950 hover:bg-slate-900 text-white text-xs font-extrabold flex items-center gap-2 transition cursor-pointer shadow-md shrink-0"
+              className="px-4 py-2 rounded-full bg-black/5 dark:bg-white/10 hover:bg-[#FA2D48]/15 text-black dark:text-white hover:text-[#FA2D48] text-xs font-semibold flex items-center gap-2 transition cursor-pointer shrink-0"
             >
-              <LogOut className="w-3.5 h-3.5 text-amber-400" />
+              <LogOut className="w-3.5 h-3.5" />
               Sign Out
             </button>
           )}
@@ -107,127 +103,127 @@ export const AccountView: React.FC<AccountViewProps> = ({
 
       {/* Real Library Summary Cards */}
       <div className="space-y-3">
-        <h2 className="text-sm font-extrabold text-slate-800 uppercase tracking-wider px-1">
-          Your Personal Library
+        <h2 className="text-xs font-bold text-black dark:text-white uppercase tracking-wider px-1">
+          Your Library
         </h2>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           <div
             onClick={() => onNavigateTab('favorites')}
-            className="p-4 rounded-2xl bg-white border border-slate-200/90 shadow-xs hover:border-amber-300 hover:shadow-md transition cursor-pointer group"
+            className="p-4 rounded-[16px] bg-[#FFFFFF] dark:bg-[#1C1C1E] border border-[#C6C6C8]/40 dark:border-[#38383A]/60 shadow-xs hover:border-[#FA2D48] transition cursor-pointer group"
           >
             <div className="flex items-center justify-between mb-2">
-              <div className="w-9 h-9 rounded-xl bg-rose-50 text-rose-500 flex items-center justify-center">
+              <div className="w-8 h-8 rounded-full bg-[#FA2D48]/10 text-[#FA2D48] flex items-center justify-center">
                 <Heart className="w-4 h-4 fill-current" />
               </div>
-              <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-amber-500 transition-colors" />
+              <ChevronRight className="w-4 h-4 text-[#8E8E93] group-hover:text-[#FA2D48] transition-colors" />
             </div>
-            <div className="text-xl font-black text-slate-900">{favoritesCount}</div>
-            <div className="text-xs font-bold text-slate-500">Liked Songs</div>
+            <div className="text-xl font-bold text-black dark:text-white">{favoritesCount}</div>
+            <div className="text-xs text-[#3C3C43]/70 dark:text-[#8E8E93] font-normal">Liked Songs</div>
           </div>
 
           <div
             onClick={() => onNavigateTab('playlists')}
-            className="p-4 rounded-2xl bg-white border border-slate-200/90 shadow-xs hover:border-amber-300 hover:shadow-md transition cursor-pointer group"
+            className="p-4 rounded-[16px] bg-[#FFFFFF] dark:bg-[#1C1C1E] border border-[#C6C6C8]/40 dark:border-[#38383A]/60 shadow-xs hover:border-[#FA2D48] transition cursor-pointer group"
           >
             <div className="flex items-center justify-between mb-2">
-              <div className="w-9 h-9 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center">
+              <div className="w-8 h-8 rounded-full bg-[#FA2D48]/10 text-[#FA2D48] flex items-center justify-center">
                 <ListMusic className="w-4 h-4" />
               </div>
-              <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-amber-500 transition-colors" />
+              <ChevronRight className="w-4 h-4 text-[#8E8E93] group-hover:text-[#FA2D48] transition-colors" />
             </div>
-            <div className="text-xl font-black text-slate-900">{playlistsCount}</div>
-            <div className="text-xs font-bold text-slate-500">Playlists</div>
+            <div className="text-xl font-bold text-black dark:text-white">{playlistsCount}</div>
+            <div className="text-xs text-[#3C3C43]/70 dark:text-[#8E8E93] font-normal">Playlists</div>
           </div>
 
           <div
             onClick={() => onNavigateTab('history')}
-            className="p-4 rounded-2xl bg-white border border-slate-200/90 shadow-xs hover:border-amber-300 hover:shadow-md transition cursor-pointer group"
+            className="p-4 rounded-[16px] bg-[#FFFFFF] dark:bg-[#1C1C1E] border border-[#C6C6C8]/40 dark:border-[#38383A]/60 shadow-xs hover:border-[#FA2D48] transition cursor-pointer group"
           >
             <div className="flex items-center justify-between mb-2">
-              <div className="w-9 h-9 rounded-xl bg-sky-50 text-sky-600 flex items-center justify-center">
+              <div className="w-8 h-8 rounded-full bg-[#FA2D48]/10 text-[#FA2D48] flex items-center justify-center">
                 <Clock className="w-4 h-4" />
               </div>
-              <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-amber-500 transition-colors" />
+              <ChevronRight className="w-4 h-4 text-[#8E8E93] group-hover:text-[#FA2D48] transition-colors" />
             </div>
-            <div className="text-xl font-black text-slate-900">{historyCount}</div>
-            <div className="text-xs font-bold text-slate-500">Recently Played</div>
+            <div className="text-xl font-bold text-black dark:text-white">{historyCount}</div>
+            <div className="text-xs text-[#3C3C43]/70 dark:text-[#8E8E93] font-normal">Recently Played</div>
           </div>
 
           <div
             onClick={() => onNavigateTab('downloads')}
-            className="p-4 rounded-2xl bg-white border border-slate-200/90 shadow-xs hover:border-amber-300 hover:shadow-md transition cursor-pointer group"
+            className="p-4 rounded-[16px] bg-[#FFFFFF] dark:bg-[#1C1C1E] border border-[#C6C6C8]/40 dark:border-[#38383A]/60 shadow-xs hover:border-[#FA2D48] transition cursor-pointer group"
           >
             <div className="flex items-center justify-between mb-2">
-              <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
+              <div className="w-8 h-8 rounded-full bg-[#34C759]/10 text-[#34C759] flex items-center justify-center">
                 <Download className="w-4 h-4" />
               </div>
-              <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-amber-500 transition-colors" />
+              <ChevronRight className="w-4 h-4 text-[#8E8E93] group-hover:text-[#FA2D48] transition-colors" />
             </div>
-            <div className="text-xl font-black text-slate-900">{downloadsCount}</div>
-            <div className="text-xs font-bold text-slate-500">Offline Tracks</div>
+            <div className="text-xl font-bold text-black dark:text-white">{downloadsCount}</div>
+            <div className="text-xs text-[#3C3C43]/70 dark:text-[#8E8E93] font-normal">Offline Tracks</div>
           </div>
         </div>
       </div>
 
       {/* Cloud Synchronization Section */}
       {user ? (
-        <div className="p-6 rounded-3xl bg-white border border-slate-200/90 shadow-xs space-y-4">
+        <div className="p-6 rounded-[20px] bg-[#FFFFFF] dark:bg-[#1C1C1E] border border-[#C6C6C8]/40 dark:border-[#38383A]/60 shadow-xs space-y-4">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center border border-amber-200">
+            <div className="w-10 h-10 rounded-[12px] bg-[#FA2D48]/10 text-[#FA2D48] flex items-center justify-center">
               <Cloud className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="text-base font-extrabold text-slate-900">Cloud Sync & Backup</h3>
-              <p className="text-xs font-medium text-slate-500">
-                Seamlessly synchronize your local favorites, history and metadata to your cloud account.
+              <h3 className="text-base font-bold text-black dark:text-white">Cloud Sync & Backup</h3>
+              <p className="text-xs text-[#3C3C43]/70 dark:text-[#8E8E93] font-normal">
+                Seamlessly synchronize your local favorites, history and playlists to your account.
               </p>
             </div>
           </div>
 
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 pt-2 border-t border-slate-100">
-            <p className="text-xs font-medium text-slate-600">
-              Last synced: <span className="font-bold text-slate-800">Just now</span>
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 pt-2 border-t border-[#C6C6C8]/30 dark:border-[#38383A]/50">
+            <p className="text-xs font-normal text-[#3C3C43]/70 dark:text-[#8E8E93]">
+              Last synced: <span className="font-semibold text-black dark:text-white">Just now</span>
             </p>
             <button
               onClick={handleSync}
               disabled={isSyncing}
-              className="py-2.5 px-4 rounded-2xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold flex items-center justify-center gap-2 transition cursor-pointer disabled:opacity-50"
+              className="py-2 px-4 rounded-full bg-[#FA2D48] hover:bg-[#FC3C44] text-white text-xs font-semibold flex items-center justify-center gap-2 transition cursor-pointer disabled:opacity-50 shadow-xs"
             >
-              <RefreshCw className={`w-3.5 h-3.5 text-amber-400 ${isSyncing ? 'animate-spin' : ''}`} />
+              <RefreshCw className={`w-3.5 h-3.5 ${isSyncing ? 'animate-spin' : ''}`} />
               {isSyncing ? 'Syncing with Cloud...' : 'Sync Local Data to Cloud'}
             </button>
           </div>
 
           {syncSuccess && (
-            <div className="p-3 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold flex items-center gap-2">
-              <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+            <div className="p-3 rounded-[12px] bg-[#34C759]/10 border border-[#34C759]/30 text-[#34C759] text-xs font-semibold flex items-center gap-2">
+              <CheckCircle2 className="w-4 h-4 text-[#34C759] shrink-0" />
               Your local favorites, play history and playlists are synchronized with your cloud account!
             </div>
           )}
         </div>
       ) : (
-        <div className="p-6 rounded-3xl bg-amber-50/80 border border-amber-200 shadow-xs space-y-4">
+        <div className="p-6 rounded-[20px] bg-[#FFFFFF] dark:bg-[#1C1C1E] border border-[#C6C6C8]/40 dark:border-[#38383A]/60 shadow-xs space-y-4">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-amber-500 text-slate-950 flex items-center justify-center font-bold">
-              ⚡
+            <div className="w-10 h-10 rounded-[12px] bg-[#FA2D48]/10 text-[#FA2D48] flex items-center justify-center font-bold">
+              <Sparkles className="w-5 h-5 text-[#FA2D48]" />
             </div>
             <div>
-              <h3 className="text-base font-extrabold text-slate-950">Sync Across Devices</h3>
-              <p className="text-xs font-medium text-amber-900/80">
-                You are currently in Guest Mode. Create a free account to back up your music library to the cloud.
+              <h3 className="text-base font-bold text-black dark:text-white">Sync Across Devices</h3>
+              <p className="text-xs text-[#3C3C43]/70 dark:text-[#8E8E93] font-normal">
+                You are currently in Guest Mode. Create a free profile to back up your music library to the cloud.
               </p>
             </div>
           </div>
-          <div className="flex gap-3 pt-1">
+          <div className="flex gap-2.5 pt-1">
             <button
               onClick={() => onNavigateTab('signup')}
-              className="py-2.5 px-5 rounded-2xl bg-slate-950 text-white hover:bg-slate-800 text-xs font-extrabold cursor-pointer transition"
+              className="py-2 px-4 rounded-full bg-[#FA2D48] text-white hover:bg-[#FC3C44] text-xs font-semibold cursor-pointer transition shadow-xs"
             >
-              Create Free Account
+              Create Profile
             </button>
             <button
               onClick={() => onNavigateTab('login')}
-              className="py-2.5 px-5 rounded-2xl bg-white border border-amber-300 text-amber-900 hover:bg-amber-100/60 text-xs font-extrabold cursor-pointer transition"
+              className="py-2 px-4 rounded-full bg-black/5 dark:bg-white/10 text-black dark:text-white hover:bg-black/10 dark:hover:bg-white/15 text-xs font-semibold cursor-pointer transition"
             >
               Sign In
             </button>
@@ -236,45 +232,35 @@ export const AccountView: React.FC<AccountViewProps> = ({
       )}
 
       {/* Audio & System Information */}
-      <div className="p-6 rounded-3xl bg-white border border-slate-200/90 shadow-xs space-y-4">
+      <div className="p-6 rounded-[20px] bg-[#FFFFFF] dark:bg-[#1C1C1E] border border-[#C6C6C8]/40 dark:border-[#38383A]/60 shadow-xs space-y-4">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-2xl bg-slate-100 text-slate-700 flex items-center justify-center">
+          <div className="w-10 h-10 rounded-[12px] bg-black/5 dark:bg-white/10 text-black dark:text-white flex items-center justify-center">
             <SlidersHorizontal className="w-5 h-5" />
           </div>
           <div>
-            <h3 className="text-base font-extrabold text-slate-900">Audio Quality & Preferences</h3>
-            <p className="text-xs font-medium text-slate-500">
+            <h3 className="text-base font-bold text-black dark:text-white">Audio Quality & Preferences</h3>
+            <p className="text-xs text-[#3C3C43]/70 dark:text-[#8E8E93] font-normal">
               High definition stream configurations
             </p>
           </div>
         </div>
 
-        <div className="space-y-2.5 pt-2 border-t border-slate-100 text-xs">
+        <div className="space-y-2.5 pt-2 border-t border-[#C6C6C8]/30 dark:border-[#38383A]/50 text-xs">
           <div className="flex items-center justify-between py-1.5">
-            <span className="font-bold text-slate-700">Audio Stream Quality</span>
-            <span className="font-black text-amber-600 bg-amber-50 px-2.5 py-1 rounded-xl border border-amber-200">
-              320 kbps High Definition
+            <span className="text-[#3C3C43]/80 dark:text-[#EBEBF5]/80 font-medium">Audio Stream Quality</span>
+            <span className="font-semibold text-[#FA2D48] bg-[#FA2D48]/10 px-2.5 py-0.5 rounded-full">
+              Free Music Lossless 24-bit / 48kHz
             </span>
           </div>
           <div className="flex items-center justify-between py-1.5">
-            <span className="font-bold text-slate-700">Offline Storage Engine</span>
-            <span className="font-bold text-slate-800">Local Browser IndexedDB</span>
+            <span className="text-[#3C3C43]/80 dark:text-[#EBEBF5]/80 font-medium">Offline Storage Engine</span>
+            <span className="font-semibold text-black dark:text-white">IndexedDB Persistent Cache</span>
           </div>
           <div className="flex items-center justify-between py-1.5">
-            <span className="font-bold text-slate-700">Audio Decryption Protocol</span>
-            <span className="font-bold text-slate-800">DES ECB Hardware Pipeline</span>
+            <span className="text-[#3C3C43]/80 dark:text-[#EBEBF5]/80 font-medium">Spatial Audio</span>
+            <span className="font-semibold text-black dark:text-white">Dolby Atmos Dynamic Stereo</span>
           </div>
         </div>
-      </div>
-
-      {/* Branding Footer */}
-      <div className="text-center py-6 space-y-1.5 border-t border-slate-200/80">
-        <div className="text-xs font-black text-slate-950 tracking-wider uppercase">
-          FREE MUSIC
-        </div>
-        <p className="text-[11px] font-extrabold text-amber-700 tracking-wider uppercase">
-          SURAJ KHANDAGALE
-        </p>
       </div>
     </div>
   );

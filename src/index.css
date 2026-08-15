@@ -2,63 +2,177 @@
 
 @layer base {
   :root {
-    --apple-red: #FA2D48;
-    --apple-coral: #FC3C44;
-    --apple-red-pressed: #D4213B;
-    --apple-canvas-light: #FFFFFF;
-    --apple-surface-1-light: #F2F2F7;
-    --apple-surface-2-light: #FFFFFF;
-    --apple-surface-3-light: #E5E5EA;
-    --apple-divider-light: #C6C6C8;
+    /* Apple Music iOS Color Palette */
+    --am-accent: #FA2D48;
+    --am-accent-hover: #FC3C44;
+    --am-accent-active: #E02038;
     
-    --apple-canvas-dark: #000000;
-    --apple-surface-1-dark: #1C1C1E;
-    --apple-surface-2-dark: #2C2C2E;
-    --apple-surface-3-dark: #3A3A3C;
-    --apple-divider-dark: #38383A;
+    /* Strict Light Mode Palette */
+    --am-bg-light: #FFFFFF;
+    --am-system-bg-light: #F2F2F7;
+    --am-surface-light: #FFFFFF;
+    --am-surface-secondary-light: #E5E5EA;
+    --am-border-light: rgba(198, 198, 200, 0.4);
+    --am-text-primary-light: #000000;
+    --am-text-secondary-light: #8E8E93;
     
-    --apple-atmos-gold: #D4A857;
-    --apple-lossless-silver: #8E8E93;
-    --apple-system-blue: #007AFF;
-    --apple-system-green: #34C759;
+    /* Strict Dark Mode Palette */
+    --am-bg-dark: #000000;
+    --am-system-bg-dark: #000000;
+    --am-surface-dark: #1C1C1E;
+    --am-surface-secondary-dark: #2C2C2E;
+    --am-border-dark: rgba(56, 56, 58, 0.6);
+    --am-text-primary-dark: #FFFFFF;
+    --am-text-secondary-dark: #8E8E93;
   }
 
   body {
     font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "SF Pro", "Helvetica Neue", Helvetica, Arial, sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    background-color: var(--am-bg-light);
+    color: var(--am-text-primary-light);
+  }
+
+  .dark body {
+    background-color: var(--am-bg-dark);
+    color: var(--am-text-primary-dark);
   }
 }
 
-@keyframes waveBar {
-  0%, 100% {
-    transform: scaleY(0.35);
-    opacity: 0.7;
-  }
-  50% {
-    transform: scaleY(1);
-    opacity: 1;
-  }
+/* SF Pro Apple Music Typography Scale */
+.text-ios-large-title {
+  font-size: 34px;
+  line-height: 41px;
+  letter-spacing: 0.37px;
+  font-weight: 700;
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro", sans-serif;
 }
 
-.animate-wave-bar {
-  animation: waveBar 1.2s ease-in-out infinite;
+.text-ios-title-1 {
+  font-size: 28px;
+  line-height: 34px;
+  letter-spacing: 0.36px;
+  font-weight: 700;
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro", sans-serif;
 }
 
-/* Apple Music 3-Bar Equalizer */
+.text-ios-title-2 {
+  font-size: 22px;
+  line-height: 28px;
+  letter-spacing: 0.35px;
+  font-weight: 700;
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro", sans-serif;
+}
+
+.text-ios-title-3 {
+  font-size: 20px;
+  line-height: 25px;
+  letter-spacing: 0.38px;
+  font-weight: 600;
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro", sans-serif;
+}
+
+.text-ios-headline {
+  font-size: 17px;
+  line-height: 22px;
+  letter-spacing: -0.41px;
+  font-weight: 600;
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro", sans-serif;
+}
+
+.text-ios-body {
+  font-size: 17px;
+  line-height: 22px;
+  letter-spacing: -0.41px;
+  font-weight: 400;
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro", sans-serif;
+}
+
+.text-ios-callout {
+  font-size: 16px;
+  line-height: 21px;
+  letter-spacing: -0.32px;
+  font-weight: 400;
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro", sans-serif;
+}
+
+.text-ios-subheadline {
+  font-size: 15px;
+  line-height: 20px;
+  letter-spacing: -0.24px;
+  font-weight: 400;
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro", sans-serif;
+}
+
+.text-ios-footnote {
+  font-size: 13px;
+  line-height: 18px;
+  letter-spacing: -0.08px;
+  font-weight: 400;
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro", sans-serif;
+}
+
+.text-ios-caption-1 {
+  font-size: 12px;
+  line-height: 16px;
+  letter-spacing: 0px;
+  font-weight: 400;
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro", sans-serif;
+}
+
+.text-ios-caption-2 {
+  font-size: 11px;
+  line-height: 13px;
+  letter-spacing: 0.07px;
+  font-weight: 400;
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro", sans-serif;
+}
+
+/* Apple iOS System Material Blurs */
+.ios-material-blur-light {
+  background: rgba(255, 255, 255, 0.82);
+  backdrop-filter: blur(25px) saturate(190%);
+  -webkit-backdrop-filter: blur(25px) saturate(190%);
+}
+
+.ios-material-blur-dark {
+  background: rgba(28, 28, 30, 0.82);
+  backdrop-filter: blur(25px) saturate(190%);
+  -webkit-backdrop-filter: blur(25px) saturate(190%);
+}
+
+.ios-bar-blur {
+  background: rgba(255, 255, 255, 0.88);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+}
+
+.dark .ios-bar-blur {
+  background: rgba(18, 18, 18, 0.88);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+}
+
+/* Apple Equalizer 4-Bar Animation */
 @keyframes appleEq1 {
   0%, 100% { height: 4px; }
   50% { height: 16px; }
 }
 
 @keyframes appleEq2 {
-  0%, 100% { height: 14px; }
-  50% { height: 6px; }
+  0%, 100% { height: 15px; }
+  50% { height: 5px; }
 }
 
 @keyframes appleEq3 {
-  0%, 100% { height: 8px; }
-  50% { height: 16px; }
+  0%, 100% { height: 7px; }
+  50% { height: 18px; }
+}
+
+@keyframes appleEq4 {
+  0%, 100% { height: 13px; }
+  50% { height: 4px; }
 }
 
 .animate-apple-eq-1 {
@@ -73,65 +187,12 @@
   animation: appleEq3 0.65s ease-in-out infinite 0.3s;
 }
 
-/* Dancing Baby Keyframe Animations */
-@keyframes babyDance {
-  0%, 100% {
-    transform: translateY(0px) rotate(0deg) scale(1);
-  }
-  25% {
-    transform: translateY(-5px) rotate(-3deg) scale(1.02);
-  }
-  50% {
-    transform: translateY(0px) rotate(0deg) scale(1);
-  }
-  75% {
-    transform: translateY(-5px) rotate(3deg) scale(1.02);
-  }
+.animate-apple-eq-4 {
+  animation: appleEq4 0.95s ease-in-out infinite 0.1s;
 }
 
-@keyframes babyArmLeft {
-  0%, 100% {
-    transform: rotate(0deg);
-  }
-  50% {
-    transform: rotate(-22deg);
-  }
+/* Apple Music Song Row Spec */
+.apple-music-row {
+  height: 56px;
+  min-height: 56px;
 }
-
-@keyframes babyArmRight {
-  0%, 100% {
-    transform: rotate(0deg);
-  }
-  50% {
-    transform: rotate(22deg);
-  }
-}
-
-@keyframes babyHeadBob {
-  0%, 100% {
-    transform: rotate(0deg) translateY(0);
-  }
-  50% {
-    transform: rotate(5deg) translateY(2px);
-  }
-}
-
-.animate-baby-dance {
-  animation: babyDance 0.75s ease-in-out infinite;
-}
-
-.animate-baby-arm-left {
-  animation: babyArmLeft 0.75s ease-in-out infinite;
-  transform-origin: 40px 78px;
-}
-
-.animate-baby-arm-right {
-  animation: babyArmRight 0.75s ease-in-out infinite;
-  transform-origin: 80px 78px;
-}
-
-.animate-baby-head {
-  animation: babyHeadBob 0.75s ease-in-out infinite;
-  transform-origin: 60px 70px;
-}
-

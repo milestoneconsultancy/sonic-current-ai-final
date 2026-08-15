@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React from 'react';
 
 interface AudioProgressBarProps {
   currentTime: number;
@@ -13,10 +13,8 @@ interface AudioProgressBarProps {
 export const AudioProgressBar: React.FC<AudioProgressBarProps> = ({
   currentTime,
   duration,
-  isPlaying,
   onSeek,
   className = '',
-  barCount = 28,
   variant = 'light',
 }) => {
   const formatTime = (seconds: number) => {
@@ -27,77 +25,37 @@ export const AudioProgressBar: React.FC<AudioProgressBarProps> = ({
   };
 
   const progressPercent = duration > 0 ? Math.min(100, Math.max(0, (currentTime / duration) * 100)) : 0;
-
-  // Deterministic height profile for realistic floating audio wave peaks
-  const waveformHeights = useMemo(() => {
-    const heights: number[] = [];
-    for (let i = 0; i < barCount; i++) {
-      const val = Math.abs(
-        Math.sin(i * 0.45) * 0.45 + Math.cos(i * 0.8) * 0.35 + Math.sin(i * 0.15) * 0.2
-      );
-      const pct = Math.round(25 + val * 70);
-      heights.push(pct);
-    }
-    return heights;
-  }, [barCount]);
-
   const isDark = variant === 'dark';
 
   return (
-    <div className={`w-full flex items-center gap-2 text-[11px] select-none ${className}`}>
+    <div className={`w-full flex items-center gap-3 text-xs select-none ${className}`}>
       {/* Current Time */}
-      <span className={`w-8 text-right font-medium shrink-0 ${isDark ? 'text-white/70' : 'text-[#3C3C43]/70'}`}>
+      <span className={`w-9 text-right font-medium shrink-0 ${isDark ? 'text-white/70' : 'text-[#8E8E93]'}`}>
         {formatTime(currentTime)}
       </span>
 
-      {/* Interactive Floating Waveform */}
-      <div className="relative flex-1 h-6 flex items-center group cursor-pointer">
-        {/* Waveform Bar Canvas */}
-        <div className="w-full h-full flex items-center justify-between gap-[2px] px-0.5">
-          {waveformHeights.map((heightPct, idx) => {
-            const barPosPercent = (idx / (barCount - 1)) * 100;
-            const isPlayed = barPosPercent <= progressPercent;
-            const animDelay = `${(idx % 8) * 0.12}s`;
-
-            return (
-              <div
-                key={idx}
-                className="flex-1 flex items-center justify-center h-full py-0.5"
-              >
-                <div
-                  style={{
-                    height: `${heightPct}%`,
-                    animationDelay: animDelay,
-                    animationPlayState: isPlaying && isPlayed ? 'running' : 'paused',
-                  }}
-                  className={`w-full max-w-[3px] rounded-full transition-all duration-150 origin-center ${
-                    isPlayed
-                      ? 'bg-[#FA2D48]'
-                      : isDark
-                      ? 'bg-white/20 group-hover:bg-white/30'
-                      : 'bg-[#C6C6C8]/60 group-hover:bg-[#C6C6C8]'
-                  } ${
-                    isPlaying && isPlayed ? 'animate-wave-bar' : ''
-                  }`}
-                />
-              </div>
-            );
-          })}
-        </div>
-
-        {/* Subtle Bottom Progress Line Overlay */}
+      {/* Interactive Apple Music Scrubber Bar */}
+      <div className="relative flex-1 h-5 flex items-center group cursor-pointer">
+        {/* Background Track */}
         <div
-          className={`absolute inset-x-0 bottom-0 h-[2px] rounded-full overflow-hidden pointer-events-none ${
-            isDark ? 'bg-white/10' : 'bg-[#C6C6C8]/40'
+          className={`w-full h-[5px] rounded-full overflow-hidden transition-all duration-150 group-hover:h-[7px] ${
+            isDark ? 'bg-white/20' : 'bg-[#E5E5EA] dark:bg-[#2C2C2E]'
           }`}
         >
+          {/* Apple Music Red Filled Progress */}
           <div
-            className="h-full bg-[#FA2D48] transition-all duration-100 ease-out"
+            className="h-full bg-[#FA2D48] rounded-full transition-all duration-75 ease-out"
             style={{ width: `${progressPercent}%` }}
           />
         </div>
 
-        {/* Range Input for Precise Track Seeking */}
+        {/* Apple iOS Scrubbing Thumb / Dot (Appears on hover) */}
+        <div
+          className="absolute top-1/2 -translate-y-1/2 w-3 h-3 bg-white rounded-full shadow-md pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-150 ring-1 ring-black/10"
+          style={{ left: `calc(${progressPercent}% - 6px)` }}
+        />
+
+        {/* Range Input for Accessible Seeking */}
         <input
           type="range"
           min="0"
@@ -106,17 +64,15 @@ export const AudioProgressBar: React.FC<AudioProgressBarProps> = ({
           value={currentTime}
           onChange={(e) => onSeek(parseFloat(e.target.value))}
           className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
-          title="Seek track position"
-          aria-label="Seek track position"
+          title="Seek playback position"
+          aria-label="Seek playback position"
         />
       </div>
 
-      {/* Total Duration */}
-      <span className={`w-8 text-left font-medium shrink-0 ${isDark ? 'text-white/70' : 'text-[#3C3C43]/70'}`}>
+      {/* Total Duration or Remaining Time */}
+      <span className={`w-9 text-left font-medium shrink-0 ${isDark ? 'text-white/70' : 'text-[#8E8E93]'}`}>
         {formatTime(duration)}
       </span>
     </div>
   );
 };
-
-

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   ChevronDown,
   Play,
@@ -15,15 +15,14 @@ import {
   Check,
   Loader2,
   Music2,
-  Sparkles,
   Mic2,
   Disc,
 } from 'lucide-react';
 import { Song, RepeatMode } from '../types';
 import { QueueCarousel } from './QueueCarousel';
 import { AudioProgressBar } from './AudioProgressBar';
-import { DancingBaby } from './DancingBaby';
 import { LyricsView } from './LyricsView';
+import { extractGradientFromArtwork, ExtractedColors } from '../lib/colorExtractor';
 
 interface FullPlayerModalProps {
   isOpen: boolean;
@@ -83,50 +82,66 @@ export const FullPlayerModal: React.FC<FullPlayerModalProps> = ({
   onSelectSongFromQueue,
 }) => {
   const [activeTab, setActiveTab] = useState<'cover' | 'lyrics'>('cover');
+  const [colors, setColors] = useState<ExtractedColors | null>(null);
+
+  // Extract dynamic colors from artwork whenever currentSong changes
+  useEffect(() => {
+    if (currentSong?.artwork) {
+      extractGradientFromArtwork(currentSong.artwork).then(setColors);
+    } else {
+      setColors(null);
+    }
+  }, [currentSong?.artwork]);
 
   if (!isOpen || !currentSong) return null;
 
+  const bgGradient = colors?.darkGradient || 'linear-gradient(180deg, #2C2C2E 0%, #1C1C1E 40%, #000000 100%)';
+
   return (
-    <div className="fixed inset-0 z-50 bg-[#000000] text-white flex flex-col justify-between p-4 sm:p-6 md:p-10 overflow-y-auto animate-in fade-in duration-300 select-none">
-      {/* Dynamic Blurred Artwork Background Glow Layer */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none opacity-35">
+    <div
+      className="fixed inset-0 z-50 text-white flex flex-col justify-between p-4 sm:p-6 md:p-10 overflow-y-auto animate-in fade-in duration-300 select-none transition-colors"
+      style={{ background: bgGradient }}
+    >
+      {/* Background Ambient Glow */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none opacity-30">
         {currentSong.artwork && (
           <img
             src={currentSong.artwork}
             alt=""
-            className="w-full h-full object-cover blur-[90px] scale-125 transform transition-all duration-700"
+            className="w-full h-full object-cover blur-[90px] scale-150 transform transition-all duration-700"
           />
         )}
       </div>
 
       {/* Header */}
-      <div className="relative z-10 flex items-center justify-between max-w-3xl mx-auto w-full">
+      <div className="relative z-10 flex items-center justify-between max-w-2xl mx-auto w-full">
+        {/* Dismiss chevron */}
         <button
           onClick={onClose}
           aria-label="Dismiss full player"
-          className="p-2.5 rounded-full bg-white/10 hover:bg-white/20 border border-white/10 text-white backdrop-blur-md transition cursor-pointer"
+          className="p-2.5 rounded-full bg-white/10 hover:bg-white/20 backdrop-blur-xl transition cursor-pointer text-white/80 hover:text-white"
         >
-          <ChevronDown className="w-5 h-5" />
+          <ChevronDown className="w-6 h-6" />
         </button>
 
-        {/* View Mode Switcher Pill */}
-        <div className="flex items-center bg-[#1C1C1E]/80 backdrop-blur-xl border border-white/15 p-1 rounded-full shadow-lg">
+        {/* View Switcher Pill */}
+        <div className="flex items-center bg-white/15 dark:bg-black/30 backdrop-blur-xl p-1 rounded-full border border-white/10 shadow-xs">
           <button
             onClick={() => setActiveTab('cover')}
             className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold tracking-tight transition cursor-pointer ${
               activeTab === 'cover'
-                ? 'bg-[#FA2D48] text-white shadow-xs'
+                ? 'bg-white text-black shadow-xs'
                 : 'text-white/70 hover:text-white'
             }`}
           >
             <Disc className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">Cover</span>
+            <span className="hidden sm:inline">Artwork</span>
           </button>
           <button
             onClick={() => setActiveTab('lyrics')}
             className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold tracking-tight transition cursor-pointer ${
               activeTab === 'lyrics'
-                ? 'bg-[#FA2D48] text-white shadow-xs'
+                ? 'bg-white text-black shadow-xs'
                 : 'text-white/70 hover:text-white'
             }`}
           >
@@ -135,54 +150,52 @@ export const FullPlayerModal: React.FC<FullPlayerModalProps> = ({
           </button>
         </div>
 
+        {/* Favorite Button */}
         <button
           onClick={() => onToggleFavorite(currentSong)}
           aria-label={isFavorite ? 'Remove from Liked' : 'Like song'}
-          className={`p-2.5 rounded-full border backdrop-blur-md transition cursor-pointer ${
+          className={`p-2.5 rounded-full backdrop-blur-xl transition cursor-pointer ${
             isFavorite
-              ? 'text-[#FA2D48] border-[#FA2D48]/40 bg-[#FA2D48]/20'
-              : 'text-white/70 border-white/10 bg-white/10 hover:text-[#FA2D48]'
+              ? 'text-[#FA2D48] bg-white/10'
+              : 'text-white/70 bg-white/10 hover:text-[#FA2D48] hover:bg-white/20'
           }`}
         >
-          <Heart className={`w-5 h-5 ${isFavorite ? 'fill-current' : ''}`} />
+          <Heart className={`w-6 h-6 ${isFavorite ? 'fill-[#FA2D48]' : ''}`} />
         </button>
       </div>
 
-      {/* Main Body Grid */}
-      <div className="relative z-10 max-w-3xl mx-auto w-full my-auto py-4 sm:py-6 grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-10 items-center">
-        {/* Left Column: Album Artwork & Companion OR Live Lyrics View */}
+      {/* Main Content Area */}
+      <div className="relative z-10 max-w-md md:max-w-lg mx-auto w-full my-auto py-4 sm:py-6 flex flex-col items-center">
+        {/* Album Artwork (Signature Apple Music Shadow & Scale) OR Live Lyrics */}
         {activeTab === 'cover' ? (
-          <div className="flex flex-col items-center justify-center relative">
-            <div className="relative w-60 h-60 sm:w-72 sm:h-72 md:w-80 md:h-80 rounded-[20px] bg-[#1C1C1E] overflow-hidden shadow-[0_20px_50px_rgba(0,0,0,0.65)] border border-white/15 group">
+          <div className="flex flex-col items-center justify-center w-full mb-6 sm:mb-8">
+            <div
+              className={`relative w-64 h-64 sm:w-80 sm:h-80 md:w-88 md:h-88 rounded-[20px] bg-black/40 overflow-hidden shadow-[0_20px_45px_rgba(0,0,0,0.6)] ring-1 ring-white/15 transition-transform duration-500 ease-out ${
+                isPlaying ? 'scale-100' : 'scale-90 opacity-90'
+              }`}
+            >
               {currentSong.artwork ? (
                 <img
                   src={currentSong.artwork}
                   alt={currentSong.title}
-                  className={`w-full h-full object-cover transition-transform duration-700 ease-out ${
-                    isPlaying ? 'scale-105' : 'scale-100'
-                  }`}
+                  className="w-full h-full object-cover"
                 />
               ) : (
-                <div className="w-full h-full flex items-center justify-center text-[#8E8E93] bg-[#1C1C1E]">
-                  <Music2 className="w-16 h-16" />
+                <div className="w-full h-full flex items-center justify-center text-white/40 bg-zinc-900">
+                  <Music2 className="w-20 h-20" />
                 </div>
               )}
 
-              {/* Offline Badge */}
+              {/* Downloaded Badge */}
               {isDownloaded && (
-                <div className="absolute top-3 right-3 px-2.5 py-1 rounded-full bg-[#34C759] text-white text-[9px] font-bold uppercase tracking-wider shadow-lg backdrop-blur-md flex items-center gap-1">
-                  <Check className="w-3 h-3 stroke-[3]" /> Offline
+                <div className="absolute top-3.5 right-3.5 px-2.5 py-1 rounded-full bg-[#34C759] text-white text-[10px] font-bold uppercase tracking-wider shadow-md backdrop-blur-md flex items-center gap-1">
+                  <Check className="w-3 h-3 stroke-[3]" /> Downloaded
                 </div>
               )}
-            </div>
-
-            {/* Dancing Baby Companion */}
-            <div className="absolute -bottom-6 -right-2 sm:-right-4 md:-right-6 z-20">
-              <DancingBaby isPlaying={isPlaying} song={currentSong} />
             </div>
           </div>
         ) : (
-          <div className="w-full flex items-center justify-center">
+          <div className="w-full flex items-center justify-center mb-6">
             <LyricsView
               song={currentSong}
               currentTime={currentTime}
@@ -193,93 +206,102 @@ export const FullPlayerModal: React.FC<FullPlayerModalProps> = ({
           </div>
         )}
 
-        {/* Player Info & Controls */}
-        <div className="space-y-5 flex flex-col justify-center">
-          {/* Song Metadata */}
-          <div className="text-center md:text-left space-y-1">
-            <div className="flex items-center justify-center md:justify-start gap-2">
-              <span className="px-2 py-0.5 rounded-[4px] bg-[#D4A857]/20 text-[#D4A857] text-[10px] font-bold tracking-wider uppercase">
-                Spatial Audio
-              </span>
-              <span className="px-2 py-0.5 rounded-[4px] bg-white/10 text-[#8E8E93] text-[10px] font-bold tracking-wider uppercase">
-                Apple Lossless
-              </span>
-            </div>
-            <h1 className="text-2xl sm:text-3xl font-bold text-white tracking-tight leading-snug line-clamp-2">
-              {currentSong.title}
-            </h1>
-            <p className="text-base sm:text-lg font-medium text-[#EBEBF5]/70 truncate">
-              {currentSong.artist}
-            </p>
-            {currentSong.album && (
-              <p className="text-xs font-semibold text-[#8E8E93] truncate">
-                {currentSong.album}
+        {/* Player Controls & Info Box */}
+        <div className="w-full space-y-5">
+          {/* Track Metadata */}
+          <div className="flex items-center justify-between gap-4">
+            <div className="min-w-0 flex-1">
+              <h1 className="text-xl sm:text-2xl font-bold text-white tracking-tight leading-snug truncate">
+                {currentSong.title}
+              </h1>
+              <p className="text-base sm:text-lg font-normal text-white/70 truncate mt-0.5">
+                {currentSong.artist}
               </p>
-            )}
+              {currentSong.album && (
+                <p className="text-xs text-white/50 truncate mt-0.5">
+                  {currentSong.album}
+                </p>
+              )}
+            </div>
+
+            {/* In-app Save / Download button */}
+            <button
+              onClick={() => onDownload(currentSong)}
+              disabled={isDownloading}
+              aria-label={isDownloaded ? 'Downloaded' : 'Download for Offline'}
+              className="p-2.5 rounded-full bg-white/10 hover:bg-white/20 transition cursor-pointer shrink-0"
+            >
+              {isDownloading ? (
+                <Loader2 className="w-5 h-5 animate-spin text-[#FA2D48]" />
+              ) : isDownloaded ? (
+                <Check className="w-5 h-5 text-[#34C759]" />
+              ) : (
+                <Download className="w-5 h-5 text-white/80" />
+              )}
+            </button>
           </div>
 
-          {/* Scrubber Waveform Container */}
-          <div className="bg-[#1C1C1E]/70 border border-white/10 backdrop-blur-xl p-3 rounded-[16px] shadow-inner">
+          {/* Apple Music Scrubber Bar */}
+          <div className="px-1">
             <AudioProgressBar
               currentTime={currentTime}
               duration={duration}
               isPlaying={isPlaying}
               onSeek={onSeek}
-              barCount={36}
               variant="dark"
             />
           </div>
 
-          {/* Main Playback Controls Row */}
-          <div className="flex items-center justify-between px-2">
+          {/* Main Playback Transport Controls */}
+          <div className="flex items-center justify-between px-3 sm:px-6 pt-1">
+            {/* Shuffle Button (Active = #FA2D48, Inactive = gray) */}
             <button
               onClick={onToggleShuffle}
-              aria-label={shuffleMode ? 'Disable shuffle' : 'Enable shuffle'}
-              className={`p-2.5 rounded-full transition cursor-pointer ${
-                shuffleMode
-                  ? 'text-[#FA2D48] bg-[#FA2D48]/20'
-                  : 'text-white/50 hover:text-white'
+              aria-label={shuffleMode ? 'Disable Shuffle' : 'Enable Shuffle'}
+              className={`p-3 rounded-full transition cursor-pointer ${
+                shuffleMode ? 'text-[#FA2D48] bg-white/10' : 'text-white/60 hover:text-white'
               }`}
             >
               <Shuffle className="w-5 h-5" />
             </button>
 
+            {/* Previous Track */}
             <button
               onClick={onPrevious}
               aria-label="Previous track"
-              className="p-2.5 text-white/90 hover:text-white transition active:scale-90 cursor-pointer"
+              className="p-3 text-white hover:text-white/80 transition active:scale-90 cursor-pointer"
             >
-              <SkipBack className="w-7 h-7 fill-current" />
+              <SkipBack className="w-8 h-8 fill-current" />
             </button>
 
-            {/* Apple Music Signature 64pt Red Play Button */}
+            {/* Apple Music Signature Play/Pause Button */}
             <button
               onClick={onPlayPause}
               aria-label={isPlaying ? 'Pause' : 'Play'}
-              className="w-16 h-16 rounded-full bg-[#FA2D48] hover:bg-[#FC3C44] text-white flex items-center justify-center shadow-xl shadow-[#FA2D48]/40 hover:scale-105 active:scale-95 transition duration-200 cursor-pointer"
+              className="w-16 h-16 rounded-full bg-[#FA2D48] hover:bg-[#FC3C44] text-white flex items-center justify-center shadow-lg active:scale-95 transition duration-150 cursor-pointer"
             >
               {isPlaying ? (
-                <Pause className="w-8 h-8 fill-current" />
+                <Pause className="w-7 h-7 fill-current" />
               ) : (
-                <Play className="w-8 h-8 fill-current pl-1" />
+                <Play className="w-7 h-7 fill-current pl-1" />
               )}
             </button>
 
+            {/* Next Track */}
             <button
               onClick={onNext}
               aria-label="Next track"
-              className="p-2.5 text-white/90 hover:text-white transition active:scale-90 cursor-pointer"
+              className="p-3 text-white hover:text-white/80 transition active:scale-90 cursor-pointer"
             >
-              <SkipForward className="w-7 h-7 fill-current" />
+              <SkipForward className="w-8 h-8 fill-current" />
             </button>
 
+            {/* Repeat Button (Active = #FA2D48, Inactive = gray) */}
             <button
               onClick={onToggleRepeat}
-              aria-label={`Repeat mode ${repeatMode}`}
-              className={`p-2.5 rounded-full transition cursor-pointer ${
-                repeatMode !== 'off'
-                  ? 'text-[#FA2D48] bg-[#FA2D48]/20'
-                  : 'text-white/50 hover:text-white'
+              aria-label={`Repeat mode: ${repeatMode}`}
+              className={`p-3 rounded-full transition cursor-pointer ${
+                repeatMode !== 'off' ? 'text-[#FA2D48] bg-white/10' : 'text-white/60 hover:text-white'
               }`}
             >
               {repeatMode === 'one' ? (
@@ -290,78 +312,36 @@ export const FullPlayerModal: React.FC<FullPlayerModalProps> = ({
             </button>
           </div>
 
-          {/* Secondary Action Row */}
-          <div className="flex items-center justify-between pt-2 border-t border-white/10">
-            {/* Download Button */}
+          {/* Volume Slider Row */}
+          <div className="flex items-center gap-3 px-4 pt-2">
             <button
-              onClick={() => onDownload(currentSong)}
-              disabled={isDownloading}
-              className={`flex items-center gap-2 px-3.5 py-2 rounded-full border text-xs font-semibold transition backdrop-blur-md cursor-pointer ${
-                isDownloaded
-                  ? 'bg-[#34C759]/20 border-[#34C759]/40 text-[#34C759]'
-                  : 'bg-white/10 border-white/10 text-white hover:bg-white/15'
-              }`}
+              onClick={onToggleMute}
+              aria-label={isMuted ? 'Unmute' : 'Mute'}
+              className="text-white/60 hover:text-white transition cursor-pointer p-1"
             >
-              {isDownloading ? (
-                <>
-                  <Loader2 className="w-3.5 h-3.5 animate-spin text-[#FA2D48]" /> Downloading...
-                </>
-              ) : isDownloaded ? (
-                <>
-                  <Check className="w-3.5 h-3.5 text-[#34C759]" /> Downloaded
-                </>
+              {isMuted || volume === 0 ? (
+                <VolumeX className="w-4 h-4 text-[#FA2D48]" />
               ) : (
-                <>
-                  <Download className="w-3.5 h-3.5" /> Download
-                </>
+                <Volume2 className="w-4 h-4" />
               )}
             </button>
-
-            {/* Quick Lyrics Toggle Button */}
-            <button
-              onClick={() => setActiveTab(activeTab === 'lyrics' ? 'cover' : 'lyrics')}
-              className={`flex items-center gap-1.5 px-3.5 py-2 rounded-full border text-xs font-semibold transition backdrop-blur-md cursor-pointer ${
-                activeTab === 'lyrics'
-                  ? 'bg-[#FA2D48]/20 border-[#FA2D48]/40 text-[#FA2D48]'
-                  : 'bg-white/10 border-white/10 text-white/80 hover:text-white hover:bg-white/15'
-              }`}
-              title="Toggle Live Lyrics"
-            >
-              <Mic2 className="w-3.5 h-3.5" />
-              <span>{activeTab === 'lyrics' ? 'Cover' : 'Lyrics'}</span>
-            </button>
-
-            {/* Volume Control */}
-            <div className="flex items-center gap-2">
-              <button
-                onClick={onToggleMute}
-                aria-label={isMuted ? 'Unmute' : 'Mute'}
-                className="p-1.5 text-white/70 hover:text-white transition cursor-pointer"
-              >
-                {isMuted || volume === 0 ? (
-                  <VolumeX className="w-4 h-4 text-[#FA2D48]" />
-                ) : (
-                  <Volume2 className="w-4 h-4" />
-                )}
-              </button>
-              <input
-                type="range"
-                min="0"
-                max="1"
-                step="0.05"
-                value={isMuted ? 0 : volume}
-                onChange={(e) => onVolumeChange(parseFloat(e.target.value))}
-                className="w-16 sm:w-20 h-1.5 accent-[#FA2D48] bg-white/20 rounded-lg cursor-pointer"
-                title="Volume"
-              />
-            </div>
+            <input
+              type="range"
+              min="0"
+              max="1"
+              step="0.02"
+              value={isMuted ? 0 : volume}
+              onChange={(e) => onVolumeChange(parseFloat(e.target.value))}
+              className="flex-1 h-1.5 accent-[#FA2D48] bg-white/20 rounded-full cursor-pointer"
+              title="Volume"
+            />
           </div>
         </div>
       </div>
 
-      {/* Queue Horizontal Carousel Section */}
+      {/* Queue Carousel at Bottom */}
       {queue.length > 0 && (
-        <div className="relative z-10 max-w-3xl mx-auto w-full pt-2 border-t border-white/10">
+        <div className="relative z-10 max-w-2xl mx-auto w-full pt-3 border-t border-white/10">
           <QueueCarousel
             queue={queue}
             queueIndex={queueIndex}
@@ -374,6 +354,3 @@ export const FullPlayerModal: React.FC<FullPlayerModalProps> = ({
     </div>
   );
 };
-
-
-

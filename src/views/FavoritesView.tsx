@@ -33,15 +33,18 @@ export const FavoritesView: React.FC<FavoritesViewProps> = ({
   onAddAllToQueue,
 }) => {
   return (
-    <div className="space-y-6 pb-24 animate-in fade-in duration-200">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-3 border-b border-[#C6C6C8]/30 dark:border-[#38383A]/50">
+    <div className="space-y-6 pb-28 animate-in fade-in duration-200">
+      {/* Header (Apple Music iOS Library Title) */}
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-3 border-b border-[#C6C6C8]/40 dark:border-[#38383A]/60">
         <div>
-          <h2 className="text-2xl sm:text-3xl font-bold text-black dark:text-white tracking-tight flex items-center gap-2">
-            <Heart className="w-6 h-6 text-[#FA2D48] fill-current" /> Favorite Songs ({favorites.length})
-          </h2>
-          <p className="text-xs text-[#3C3C43]/70 dark:text-[#8E8E93] font-normal mt-1">
-            Your collection of saved favorite tracks.
+          <span className="text-xs font-semibold text-[#8E8E93] uppercase tracking-wider block mb-0.5">
+            Library
+          </span>
+          <h1 className="text-3xl sm:text-4xl font-bold tracking-tight text-black dark:text-white flex items-center gap-2.5">
+            <Heart className="w-7 h-7 text-[#FA2D48] fill-[#FA2D48]" /> Favorite Songs
+          </h1>
+          <p className="text-xs text-[#8E8E93] mt-1">
+            {favorites.length} {favorites.length === 1 ? 'track' : 'tracks'} loved
           </p>
         </div>
 
@@ -55,7 +58,7 @@ export const FavoritesView: React.FC<FavoritesViewProps> = ({
             </button>
             <button
               onClick={() => onAddAllToQueue(favorites)}
-              className="px-3.5 py-2 rounded-full bg-black/5 dark:bg-white/10 hover:bg-black/10 dark:hover:bg-white/15 text-black dark:text-white font-semibold text-xs flex items-center gap-1.5 transition cursor-pointer"
+              className="px-4 py-2 rounded-full bg-[#F2F2F7] dark:bg-[#1C1C1E] hover:bg-[#E5E5EA] dark:hover:bg-[#2C2C2E] text-black dark:text-white font-medium text-xs flex items-center gap-1.5 transition cursor-pointer"
             >
               <Plus className="w-3.5 h-3.5" /> Queue All
             </button>
@@ -63,21 +66,21 @@ export const FavoritesView: React.FC<FavoritesViewProps> = ({
         )}
       </div>
 
-      {/* List */}
+      {/* List (56px Apple Music Rows) */}
       {favorites.length === 0 ? (
-        <div className="py-16 text-center space-y-4 bg-[#FFFFFF] dark:bg-[#1C1C1E] rounded-[20px] border border-[#C6C6C8]/40 dark:border-[#38383A]/60 max-w-lg mx-auto p-8 shadow-xs">
-          <div className="w-16 h-16 rounded-full bg-[#FA2D48]/10 text-[#FA2D48] flex items-center justify-center mx-auto">
-            <Heart className="w-8 h-8 fill-current" />
+        <div className="py-16 text-center space-y-4 bg-[#F2F2F7] dark:bg-[#1C1C1E] rounded-[16px] max-w-md mx-auto p-8">
+          <div className="w-14 h-14 rounded-full bg-[#FA2D48]/10 text-[#FA2D48] flex items-center justify-center mx-auto">
+            <Heart className="w-7 h-7 fill-current" />
           </div>
           <div className="space-y-1">
             <h3 className="text-lg font-bold text-black dark:text-white">No Favorite Songs Yet</h3>
-            <p className="text-xs text-[#3C3C43]/70 dark:text-[#8E8E93] leading-relaxed max-w-sm mx-auto">
-              Tap the heart icon <Heart className="w-3 h-3 text-[#FA2D48] fill-current inline mx-0.5" /> on any track to add it to your Favorites.
+            <p className="text-xs text-[#8E8E93] leading-relaxed max-w-sm mx-auto">
+              Tap the heart icon on any song to add it to your Favorites library.
             </p>
           </div>
         </div>
       ) : (
-        <div className="space-y-2">
+        <div className="space-y-1">
           {favorites.map((song) => (
             <SongListItem
               key={song.id}
@@ -85,6 +88,7 @@ export const FavoritesView: React.FC<FavoritesViewProps> = ({
               isPlaying={isPlaying}
               isCurrent={currentSong?.id === song.id}
               isFavorite={favoritesSet.has(song.id)}
+              downloadedSet={downloadedSet}
               isDownloaded={downloadedSet.has(song.id)}
               isDownloading={downloadingSet.has(song.id)}
               onPlay={onPlaySong}
@@ -98,4 +102,3 @@ export const FavoritesView: React.FC<FavoritesViewProps> = ({
     </div>
   );
 };
-

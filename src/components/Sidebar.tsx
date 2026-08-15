@@ -1,5 +1,17 @@
 import React from 'react';
-import { Compass, Search, Download, LayoutDashboard, Music2, Sparkles, History, Heart, WifiOff } from 'lucide-react';
+import {
+  Compass,
+  Search,
+  Download,
+  LayoutDashboard,
+  Sparkles,
+  History,
+  Heart,
+  WifiOff,
+  Radio,
+  Music2,
+  ListMusic,
+} from 'lucide-react';
 import { TabType } from '../types';
 
 interface SidebarProps {
@@ -19,38 +31,39 @@ export const Sidebar: React.FC<SidebarProps> = ({
 }) => {
   const mainNav: { id: TabType; label: string; icon: React.ElementType; badge?: number | null }[] = [
     { id: 'home', label: 'Listen Now', icon: Compass },
+    { id: 'instantmix', label: 'Radio & Mixes', icon: Radio },
     { id: 'search', label: 'Search', icon: Search },
-    { id: 'downloads', label: 'Library', icon: Download, badge: downloadsCount > 0 ? downloadsCount : null },
   ];
 
   if (isAdmin) {
-    mainNav.push({ id: 'dashboard', label: 'Admin Portal', icon: LayoutDashboard });
+    mainNav.push({ id: 'dashboard', label: 'Admin Dashboard', icon: LayoutDashboard });
   }
 
   const libraryNav: { id: TabType; label: string; icon: React.ElementType; badge?: number | null }[] = [
-    { id: 'favorites', label: 'Liked Tracks', icon: Heart, badge: favoritesCount > 0 ? favoritesCount : null },
+    { id: 'favorites', label: 'Favorite Songs', icon: Heart, badge: favoritesCount > 0 ? favoritesCount : null },
+    { id: 'downloads', label: 'Downloaded Music', icon: Download, badge: downloadsCount > 0 ? downloadsCount : null },
     { id: 'history', label: 'Recently Played', icon: History },
   ];
 
   const isOffline = !navigator.onLine;
 
   return (
-    <aside className="hidden md:flex flex-col w-64 lg:w-72 border-r border-[#C6C6C8]/40 dark:border-[#38383A]/60 bg-[#F2F2F7]/90 dark:bg-[#000000] backdrop-blur-3xl h-screen sticky top-0 shrink-0 select-none z-30 transition-colors duration-300">
+    <aside className="hidden md:flex flex-col w-64 lg:w-72 border-r border-[#C6C6C8]/40 dark:border-[#38383A]/50 bg-[#F2F2F7] dark:bg-[#000000] text-black dark:text-white h-screen sticky top-0 shrink-0 select-none z-30 transition-colors duration-200">
       {/* Brand Header */}
-      <div className="p-6 pb-4 border-b border-[#C6C6C8]/30 dark:border-[#38383A]/50">
+      <div className="p-5 pb-4 border-b border-[#C6C6C8]/30 dark:border-[#38383A]/50">
         <div
           className="flex items-center gap-3 cursor-pointer group"
           onClick={() => onTabChange('home')}
         >
-          <div className="w-10 h-10 rounded-[11px] bg-gradient-to-tr from-[#FA2D48] to-[#FC3C44] flex items-center justify-center text-white shadow-md shadow-[#FA2D48]/25 group-hover:scale-105 transition-transform">
-            <Music2 className="w-5 h-5 fill-current text-white" />
+          <div className="w-9 h-9 rounded-[10px] bg-[#FA2D48] flex items-center justify-center text-white shadow-sm group-hover:bg-[#FC3C44] transition-all duration-200">
+            <Music2 className="w-5 h-5 text-white" />
           </div>
-          <div className="flex flex-col">
+          <div className="flex flex-col min-w-0">
             <h1 className="font-bold text-lg tracking-tight text-black dark:text-white leading-none">
-              Music
+              Free Music
             </h1>
-            <p className="text-[10px] font-semibold text-[#FA2D48] tracking-wider uppercase mt-1">
-              FREE MUSIC
+            <p className="text-[11px] font-normal text-[#8E8E93] mt-1 truncate">
+              Designed by Suraj Khandagale
             </p>
           </div>
         </div>
@@ -59,9 +72,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
       {/* Navigation Sections */}
       <div className="px-3 py-4 space-y-6 flex-1 overflow-y-auto">
         {/* Main Section */}
-        <div className="space-y-0.5">
-          <div className="px-3 pb-2 text-[11px] font-semibold tracking-wider text-[#3C3C43]/60 dark:text-[#EBEBF5]/60 uppercase">
-            Apple Music
+        <div className="space-y-1">
+          <div className="px-3 pb-1.5 text-[11px] font-semibold text-[#8E8E93] tracking-wide uppercase">
+            Browse
           </div>
           {mainNav.map((item) => {
             const Icon = item.icon;
@@ -73,23 +86,23 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 className={`w-full flex items-center justify-between px-3 py-2 rounded-[10px] text-sm font-medium transition-all duration-150 group cursor-pointer ${
                   isActive
                     ? 'bg-[#FA2D48] text-white font-semibold shadow-xs'
-                    : 'text-[#1C1C1E] dark:text-[#E5E5EA] hover:bg-black/5 dark:hover:bg-white/10'
+                    : 'text-black/80 dark:text-white/80 hover:bg-[#E5E5EA] dark:hover:bg-[#1C1C1E]'
                 }`}
               >
                 <div className="flex items-center gap-3">
                   <Icon
                     className={`w-4 h-4 transition-transform duration-150 ${
-                      isActive ? 'text-white stroke-[2.2]' : 'text-[#FA2D48] stroke-[1.8]'
+                      isActive ? 'text-white stroke-[2.4]' : 'text-[#FA2D48] dark:text-[#FA2D48] stroke-[1.8]'
                     }`}
                   />
                   <span>{item.label}</span>
                 </div>
                 {item.badge !== null && item.badge !== undefined && (
                   <span
-                    className={`text-[11px] font-semibold px-2 py-0.5 rounded-full ${
+                    className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
                       isActive
-                        ? 'bg-white/20 text-white'
-                        : 'bg-[#E5E5EA] dark:bg-[#2C2C2E] text-[#3C3C43] dark:text-[#EBEBF5]'
+                        ? 'bg-white/25 text-white'
+                        : 'bg-[#E5E5EA] dark:bg-[#2C2C2E] text-[#8E8E93]'
                     }`}
                   >
                     {item.badge}
@@ -101,8 +114,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
         </div>
 
         {/* Library Section */}
-        <div className="space-y-0.5">
-          <div className="px-3 pb-2 text-[11px] font-semibold tracking-wider text-[#3C3C43]/60 dark:text-[#EBEBF5]/60 uppercase">
+        <div className="space-y-1">
+          <div className="px-3 pb-1.5 text-[11px] font-semibold text-[#8E8E93] tracking-wide uppercase">
             Library
           </div>
           {libraryNav.map((item) => {
@@ -115,23 +128,23 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 className={`w-full flex items-center justify-between px-3 py-2 rounded-[10px] text-sm font-medium transition-all duration-150 group cursor-pointer ${
                   isActive
                     ? 'bg-[#FA2D48] text-white font-semibold shadow-xs'
-                    : 'text-[#1C1C1E] dark:text-[#E5E5EA] hover:bg-black/5 dark:hover:bg-white/10'
+                    : 'text-black/80 dark:text-white/80 hover:bg-[#E5E5EA] dark:hover:bg-[#1C1C1E]'
                 }`}
               >
                 <div className="flex items-center gap-3">
                   <Icon
                     className={`w-4 h-4 transition-transform duration-150 ${
-                      isActive ? 'text-white stroke-[2.2]' : 'text-[#FA2D48] stroke-[1.8]'
+                      isActive ? 'text-white stroke-[2.4]' : 'text-[#FA2D48] dark:text-[#FA2D48] stroke-[1.8]'
                     }`}
                   />
                   <span>{item.label}</span>
                 </div>
                 {item.badge !== null && item.badge !== undefined && (
                   <span
-                    className={`text-[11px] font-semibold px-2 py-0.5 rounded-full ${
+                    className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
                       isActive
-                        ? 'bg-white/20 text-white'
-                        : 'bg-[#E5E5EA] dark:bg-[#2C2C2E] text-[#3C3C43] dark:text-[#EBEBF5]'
+                        ? 'bg-white/25 text-white'
+                        : 'bg-[#E5E5EA] dark:bg-[#2C2C2E] text-[#8E8E93]'
                     }`}
                   >
                     {item.badge}
@@ -142,41 +155,29 @@ export const Sidebar: React.FC<SidebarProps> = ({
           })}
         </div>
 
-        {/* Flight Mode Callout if Offline */}
+        {/* Offline Callout */}
         {isOffline && (
           <div
             onClick={() => onTabChange('downloads')}
-            className="p-3.5 rounded-[12px] bg-[#FA2D48]/10 border border-[#FA2D48]/30 space-y-1 cursor-pointer hover:bg-[#FA2D48]/15 transition"
+            className="p-3.5 rounded-[12px] bg-[#FF9500]/10 border border-[#FF9500]/30 space-y-1 cursor-pointer hover:bg-[#FF9500]/15 transition"
           >
-            <div className="flex items-center gap-2 text-xs font-semibold text-[#FA2D48]">
+            <div className="flex items-center gap-2 text-xs font-semibold text-[#FF9500]">
               <WifiOff className="w-4 h-4" />
-              <span>Offline Mode</span>
+              <span>Offline Mode Active</span>
             </div>
-            <p className="text-[12px] text-[#3C3C43] dark:text-[#EBEBF5]/80 leading-snug">
-              Access your {downloadsCount} offline tracks in Library.
+            <p className="text-[11px] text-black/70 dark:text-white/70 leading-snug">
+              Access your {downloadsCount} downloaded songs in your offline library.
             </p>
           </div>
         )}
       </div>
 
-      {/* Audio Engine Quality Badge Card */}
-      <div className="mx-3 my-3 p-3 rounded-[12px] bg-[#FFFFFF] dark:bg-[#1C1C1E] border border-[#C6C6C8]/40 dark:border-[#38383A]/60 space-y-1 shadow-xs">
-        <div className="flex items-center gap-1.5 text-xs font-semibold text-[#D4A857]">
-          <Sparkles className="w-3.5 h-3.5 fill-current" />
-          <span>Lossless & Spatial Audio</span>
-        </div>
-        <p className="text-[11px] text-[#3C3C43]/70 dark:text-[#8E8E93] leading-snug">
-          High-resolution 24-bit / 48kHz audio streaming with instant offline caching.
-        </p>
-      </div>
-
-      {/* Footer */}
-      <div className="p-3.5 border-t border-[#C6C6C8]/30 dark:border-[#38383A]/50 text-center">
-        <span className="text-[10px] font-medium text-[#3C3C43]/50 dark:text-[#8E8E93]/60 tracking-wider uppercase">
-          Apple Music Design • Free Stream
+      {/* Footer Credit */}
+      <div className="p-4 border-t border-[#C6C6C8]/30 dark:border-[#38383A]/50 text-center">
+        <span className="text-[11px] font-medium text-[#8E8E93]">
+          Free Music • Designed by Suraj Khandagale
         </span>
       </div>
     </aside>
   );
 };
-

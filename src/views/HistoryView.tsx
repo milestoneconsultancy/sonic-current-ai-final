@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Clock, Search, Trash2, X, Play, Music2 } from 'lucide-react';
+import { Clock, Search, Trash2, X, Music2 } from 'lucide-react';
 import { Song, SearchHistoryItem, RecentlyPlayedItem } from '../types';
 import { SongListItem } from '../components/SongListItem';
 
@@ -51,29 +51,39 @@ export const HistoryView: React.FC<HistoryViewProps> = ({
   };
 
   return (
-    <div className="space-y-6 pb-24 animate-in fade-in duration-200">
+    <div className="space-y-6 pb-28 animate-in fade-in duration-200">
       {/* View Selector Tabs */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-3 border-b border-[#C6C6C8]/30 dark:border-[#38383A]/50">
-        <div className="flex items-center gap-1.5 p-1 rounded-[12px] bg-[#E5E5EA]/70 dark:bg-[#1C1C1E] border border-[#C6C6C8]/40 dark:border-[#38383A]/60">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-3 border-b border-[#C6C6C8]/40 dark:border-[#38383A]/60">
+        <div>
+          <span className="text-xs font-semibold text-[#8E8E93] uppercase tracking-wider block mb-0.5">
+            History
+          </span>
+          <h1 className="text-3xl sm:text-4xl font-bold tracking-tight text-black dark:text-white">
+            Activity & History
+          </h1>
+        </div>
+
+        {/* Tab switcher pill */}
+        <div className="flex items-center gap-1 p-1 rounded-full bg-[#E5E5EA] dark:bg-[#1C1C1E]">
           <button
             onClick={() => setActiveTab('recentlyPlayed')}
-            className={`px-3.5 py-1.5 rounded-[9px] text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer ${
+            className={`px-3.5 py-1.5 rounded-full text-xs font-semibold transition cursor-pointer flex items-center gap-1.5 ${
               activeTab === 'recentlyPlayed'
-                ? 'bg-white dark:bg-[#2C2C2E] text-black dark:text-white shadow-xs'
+                ? 'bg-white dark:bg-[#2C2C2E] text-black dark:text-white shadow-2xs'
                 : 'text-[#8E8E93] hover:text-black dark:hover:text-white'
             }`}
           >
-            <Clock className="w-3.5 h-3.5 text-[#FA2D48]" /> Recently Played ({recentlyPlayed.length})
+            <Clock className="w-3.5 h-3.5" /> Recently Played ({recentlyPlayed.length})
           </button>
           <button
             onClick={() => setActiveTab('searchHistory')}
-            className={`px-3.5 py-1.5 rounded-[9px] text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer ${
+            className={`px-3.5 py-1.5 rounded-full text-xs font-semibold transition cursor-pointer flex items-center gap-1.5 ${
               activeTab === 'searchHistory'
-                ? 'bg-white dark:bg-[#2C2C2E] text-black dark:text-white shadow-xs'
+                ? 'bg-white dark:bg-[#2C2C2E] text-black dark:text-white shadow-2xs'
                 : 'text-[#8E8E93] hover:text-black dark:hover:text-white'
             }`}
           >
-            <Search className="w-3.5 h-3.5 text-[#FA2D48]" /> Search History ({searchHistory.length})
+            <Search className="w-3.5 h-3.5" /> Search Queries ({searchHistory.length})
           </button>
         </div>
 
@@ -81,7 +91,7 @@ export const HistoryView: React.FC<HistoryViewProps> = ({
         {activeTab === 'recentlyPlayed' && recentlyPlayed.length > 0 && (
           <button
             onClick={onClearRecentlyPlayed}
-            className="px-3.5 py-1.5 rounded-full bg-black/5 dark:bg-white/10 hover:bg-[#FA2D48]/15 text-xs font-semibold text-black dark:text-white hover:text-[#FA2D48] transition flex items-center gap-1.5 cursor-pointer"
+            className="px-3 py-1.5 rounded-full text-xs font-semibold text-[#FA2D48] hover:bg-[#FA2D48]/10 transition flex items-center gap-1 cursor-pointer"
           >
             <Trash2 className="w-3.5 h-3.5" /> Clear History
           </button>
@@ -90,7 +100,7 @@ export const HistoryView: React.FC<HistoryViewProps> = ({
         {activeTab === 'searchHistory' && searchHistory.length > 0 && (
           <button
             onClick={onClearSearchHistory}
-            className="px-3.5 py-1.5 rounded-full bg-black/5 dark:bg-white/10 hover:bg-[#FA2D48]/15 text-xs font-semibold text-black dark:text-white hover:text-[#FA2D48] transition flex items-center gap-1.5 cursor-pointer"
+            className="px-3 py-1.5 rounded-full text-xs font-semibold text-[#FA2D48] hover:bg-[#FA2D48]/10 transition flex items-center gap-1 cursor-pointer"
           >
             <Trash2 className="w-3.5 h-3.5" /> Clear Searches
           </button>
@@ -101,19 +111,19 @@ export const HistoryView: React.FC<HistoryViewProps> = ({
       {activeTab === 'recentlyPlayed' && (
         <div>
           {recentlyPlayed.length === 0 ? (
-            <div className="py-16 text-center space-y-4 bg-[#FFFFFF] dark:bg-[#1C1C1E] rounded-[20px] border border-[#C6C6C8]/40 dark:border-[#38383A]/60 max-w-lg mx-auto p-8 shadow-xs">
-              <div className="w-16 h-16 rounded-full bg-[#FA2D48]/10 text-[#FA2D48] flex items-center justify-center mx-auto">
-                <Clock className="w-8 h-8" />
+            <div className="py-16 text-center space-y-4 bg-[#F2F2F7] dark:bg-[#1C1C1E] rounded-[16px] max-w-md mx-auto p-8">
+              <div className="w-14 h-14 rounded-full bg-[#E5E5EA] dark:bg-[#2C2C2E] text-[#8E8E93] flex items-center justify-center mx-auto">
+                <Clock className="w-7 h-7" />
               </div>
               <div className="space-y-1">
                 <h4 className="text-lg font-bold text-black dark:text-white">No Listening History</h4>
-                <p className="text-xs text-[#3C3C43]/70 dark:text-[#8E8E93] font-normal leading-relaxed max-w-sm mx-auto">
-                  Tracks you stream will automatically appear here so you can easily jump back to your recent favorites.
+                <p className="text-xs text-[#8E8E93] leading-relaxed max-w-sm mx-auto">
+                  Songs you play will automatically appear here.
                 </p>
               </div>
             </div>
           ) : (
-            <div className="space-y-2">
+            <div className="space-y-1">
               {recentlyPlayed.map((item) => (
                 <div key={item.id} className="relative group">
                   <SongListItem
@@ -129,7 +139,7 @@ export const HistoryView: React.FC<HistoryViewProps> = ({
                     onAddToQueue={onAddToQueue}
                     onRemove={() => onRemoveRecentlyPlayedItem(item.id)}
                   />
-                  <span className="absolute top-3.5 right-28 text-[10px] font-medium text-[#8E8E93] hidden md:block">
+                  <span className="absolute top-4 right-24 text-[10px] text-[#8E8E93] hidden md:block">
                     {formatTimestamp(item.timestamp)}
                   </span>
                 </div>
@@ -143,27 +153,27 @@ export const HistoryView: React.FC<HistoryViewProps> = ({
       {activeTab === 'searchHistory' && (
         <div>
           {searchHistory.length === 0 ? (
-            <div className="py-16 text-center space-y-4 bg-[#FFFFFF] dark:bg-[#1C1C1E] rounded-[20px] border border-[#C6C6C8]/40 dark:border-[#38383A]/60 max-w-lg mx-auto p-8 shadow-xs">
-              <div className="w-16 h-16 rounded-full bg-[#FA2D48]/10 text-[#FA2D48] flex items-center justify-center mx-auto">
-                <Search className="w-8 h-8" />
+            <div className="py-16 text-center space-y-4 bg-[#F2F2F7] dark:bg-[#1C1C1E] rounded-[16px] max-w-md mx-auto p-8">
+              <div className="w-14 h-14 rounded-full bg-[#E5E5EA] dark:bg-[#2C2C2E] text-[#8E8E93] flex items-center justify-center mx-auto">
+                <Search className="w-7 h-7" />
               </div>
               <div className="space-y-1">
                 <h4 className="text-lg font-bold text-black dark:text-white">No Search History</h4>
-                <p className="text-xs text-[#3C3C43]/70 dark:text-[#8E8E93] font-normal leading-relaxed max-w-sm mx-auto">
-                  Your search terms will be remembered here so you can quickly repeat searches anytime.
+                <p className="text-xs text-[#8E8E93] leading-relaxed max-w-sm mx-auto">
+                  Your search history will appear here for fast repeat access.
                 </p>
               </div>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
               {searchHistory.map((item) => (
                 <div
                   key={item.id}
                   onClick={() => onSelectSearchQuery(item.query)}
-                  className="group flex items-center justify-between p-3.5 rounded-[14px] bg-[#FFFFFF] dark:bg-[#1C1C1E] border border-[#C6C6C8]/40 dark:border-[#38383A]/60 hover:border-[#FA2D48] dark:hover:border-[#FA2D48] cursor-pointer transition shadow-xs"
+                  className="group flex items-center justify-between p-3.5 rounded-[12px] bg-[#F2F2F7] dark:bg-[#1C1C1E] hover:bg-[#E5E5EA] dark:hover:bg-[#2C2C2E] cursor-pointer transition"
                 >
                   <div className="flex items-center gap-3 min-w-0">
-                    <Search className="w-4 h-4 text-[#FA2D48] shrink-0" />
+                    <Search className="w-4 h-4 text-[#8E8E93] group-hover:text-[#FA2D48] transition shrink-0" />
                     <div className="min-w-0">
                       <h4 className="text-xs font-semibold text-black dark:text-white truncate">{item.query}</h4>
                       <p className="text-[10px] text-[#8E8E93]">{formatTimestamp(item.timestamp)}</p>
@@ -175,7 +185,7 @@ export const HistoryView: React.FC<HistoryViewProps> = ({
                       e.stopPropagation();
                       onRemoveSearchItem(item.id);
                     }}
-                    className="p-1.5 text-[#8E8E93] hover:text-black dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-full transition cursor-pointer"
+                    className="p-1 text-[#8E8E93] hover:text-[#FA2D48] rounded-full transition cursor-pointer"
                   >
                     <X className="w-3.5 h-3.5" />
                   </button>
@@ -188,4 +198,3 @@ export const HistoryView: React.FC<HistoryViewProps> = ({
     </div>
   );
 };
-
