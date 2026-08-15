@@ -698,26 +698,216 @@ function scoreAndRankSongs(rawSongs: any[], query: string, intent: SearchIntent)
 export const app = express();
 const PORT = 3000;
 
-// CORS & Netlify Functions Path Rewriter
-app.use((req, res, next) => {
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Range, Authorization');
-  res.setHeader('Access-Control-Expose-Headers', 'X-Context-Label');
-  if (req.method === 'OPTIONS') {
-    res.sendStatus(200);
-    return;
+// Body Parser for JSON APIs
+app.use(express.json());
+
+// ==========================================
+// REALTIME MULTI-DEVICE PRESENCE & ANALYTICS
+// ==========================================
+interface ServerActiveSession {
+  id: string;
+  sessionId: string;
+  uid: string;
+  email: string;
+  device: 'Mobile' | 'Desktop' | 'Tablet';
+  deviceDetail: string;
+  browser: string;
+  os: string;
+  page: string;
+  activeSong: string | null;
+  activeArtist?: string | null;
+  lastSeen: number;
+  lastSeenISO: string;
+  isOnline: boolean;
+}
+
+const serverActiveSessions = new Map<string, ServerActiveSession>();
+const serverAnalyticsEvents: any[] = [];
+const serverDailyStats: Record<string, { visits: number; plays: number; searches: number; downloads: number; likes: number }> = {};
+
+function pruneInactiveSessions() {
+  const now = Date.now();
+  for (const [sid, session] of serverActiveSessions.entries()) {
+    if (now - session.lastSeen > 35000) {
+      serverActiveSessions.delete(sid);
+    }
+  }
+}
+
+// 1. Presence Ping from any device (Mobile/Desktop/Tablet)
+app.post(['/api/presence/ping', '/presence/ping'], (req, res) => {
+  try {
+    const body = req.body || {};
+    const sessionId = body.sessionId || body.id;
+    if (!sessionId) {
+      res.status(400).json({ error: 'Missing sessionId' });
+      return;
+    }
+
+    const session: ServerActiveSession = {
+      id: sessionId,
+      sessionId,
+      uid: body.uid || 'guest',
+      email: body.email || 'Guest Visitor',
+      device: body.device || 'Desktop',
+      deviceDetail: body.deviceDetail || `${body.os || ''} ${body.browser || ''}`.trim() || 'Device',
+      browser: body.browser || 'Browser',
+      os: body.os || 'OS',
+      page: body.page || 'home',
+      activeSong: body.activeSong || null,
+      activeArtist: body.activeArtist || null,
+      lastSeen: Date.now(),
+      lastSeenISO: new Date().toISOString(),
+      isOnline: true,
+    };
+
+    serverActiveSessions.set(sessionId, session);
+    pruneInactiveSessions();
+    res.json({ status: 'ok', activeCount: serverActiveSessions.size });
+  } catch (e: any) {
+    res.status(500).json({ error: e?.message || 'Error' });
+  }
+});
+
+// 2. Active Devices List for Admin Dashboard
+app.get(['/api/presence/active', '/presence/active'], (req, res) => {
+  pruneInactiveSessions();
+  const users = Array.from(serverActiveSessions.values()).sort((a, b) => b.lastSeen - a.lastSeen);
+  res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+  res.json({
+    count: users.length,
+    users,
+  });
+});
+
+// 3. Presence Leave
+app.post(['/api/presence/leave', '/presence/leave'], (req, res) => {
+  try {
+    let body = req.body;
+    if (typeof body === 'string') {
+      try { body = JSON.parse(body); } catch (_) {}
+    }
+    const sessionId = body?.sessionId || body?.id;
+    if (sessionId) {
+      serverActiveSessions.delete(sessionId);
+    }
+    res.json({ status: 'ok' });
+  } catch (e) {
+    res.json({ status: 'ok' });
+  }
+});
+
+// 4. Multi-device Event Tracking (plays, searches, visits, etc.)
+app.post(['/api/analytics/track', '/analytics/track'], (req, res) => {
+  try {
+    const event = req.body || {};
+    if (event.eventType) {
+      serverAnalyticsEvents.unshift({
+        ...event,
+        serverReceivedAt: Date.now(),
+      });
+      if (serverAnalyticsEvents.length > 500) {
+        serverAnalyticsEvents.length = 500;
+      }
+
+      const today = event.date || new Date().toISOString().split('T')[0];
+      if (!serverDailyStats[today]) {
+        serverDailyStats[today] = { visits: 0, plays: 0, searches: 0, downloads: 0, likes: 0 };
+      }
+      if (event.eventType === 'visit') serverDailyStats[today].visits++;
+      if (event.eventType === 'song_play') serverDailyStats[today].plays++;
+      if (event.eventType === 'search') serverDailyStats[today].searches++;
+      if (event.eventType === 'download') serverDailyStats[today].downloads++;
+      if (event.eventType === 'like') serverDailyStats[today].likes++;
+    }
+    res.json({ status: 'ok' });
+  } catch (e) {
+    res.status(500).json({ error: 'Failed to record event' });
+  }
+});
+
+// 5. Analytics Summary API for Dashboard
+app.get(['/api/analytics/summary', '/analytics/summary'], (req, res) => {
+  pruneInactiveSessions();
+  const timeRange = (req.query.timeRange as string) || 'today';
+  let days = 30;
+  if (timeRange === 'today') days = 1;
+  if (timeRange === 'yesterday') days = 2;
+  if (timeRange === '7d') days = 7;
+  if (timeRange === '14d') days = 14;
+
+  const dates: string[] = [];
+  const today = new Date();
+  for (let i = days - 1; i >= 0; i--) {
+    const d = new Date(today);
+    d.setDate(d.getDate() - i);
+    dates.push(d.toISOString().split('T')[0]);
   }
 
-  // Handle Netlify function path prefixing
-  if (req.url.startsWith('/.netlify/functions/api')) {
-    req.url = req.url.substring('/.netlify/functions/api'.length);
-    if (!req.url.startsWith('/')) req.url = '/' + req.url;
-  }
-  if (req.url.startsWith('/api/api/')) {
-    req.url = req.url.substring('/api'.length);
-  }
-  next();
+  const todayStr = dates[dates.length - 1];
+  let totalVisits = 0;
+  let totalPlays = 0;
+  let totalSearches = 0;
+  let totalDownloads = 0;
+  let totalLikes = 0;
+  const dailyData: any[] = [];
+
+  dates.forEach((dStr) => {
+    const stat = serverDailyStats[dStr] || { visits: 0, plays: 0, searches: 0, downloads: 0, likes: 0 };
+    totalVisits += stat.visits;
+    totalPlays += stat.plays;
+    totalSearches += stat.searches;
+    totalDownloads += stat.downloads;
+    totalLikes += stat.likes;
+    dailyData.push({
+      date: dStr,
+      visits: stat.visits,
+      plays: stat.plays,
+      searches: stat.searches,
+    });
+  });
+
+  const searchCounts = new Map<string, number>();
+  const songCounts = new Map<string, { title: string; artist: string; count: number }>();
+  const artistCounts = new Map<string, number>();
+  const langCounts = new Map<string, number>();
+
+  serverAnalyticsEvents.forEach((ev) => {
+    if (ev.eventType === 'search' && ev.query) {
+      const q = String(ev.query).trim();
+      searchCounts.set(q, (searchCounts.get(q) || 0) + 1);
+    }
+    if ((ev.eventType === 'song_play' || ev.eventType === 'like') && ev.songTitle) {
+      const key = `${ev.songTitle} - ${ev.songArtist || ''}`;
+      const ex = songCounts.get(key) || { title: ev.songTitle, artist: ev.songArtist || '', count: 0 };
+      ex.count++;
+      songCounts.set(key, ex);
+      if (ev.songArtist) {
+        artistCounts.set(ev.songArtist, (artistCounts.get(ev.songArtist) || 0) + 1);
+      }
+    }
+    if (ev.language) {
+      const l = String(ev.language).trim();
+      langCounts.set(l, (langCounts.get(l) || 0) + 1);
+    }
+  });
+
+  res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+  res.json({
+    activeUsersCount: serverActiveSessions.size,
+    totalVisits: Math.max(totalVisits, serverAnalyticsEvents.filter(e => e.eventType === 'visit').length, 1),
+    todayVisits: Math.max(serverDailyStats[todayStr]?.visits || 0, 1),
+    songPlays: Math.max(totalPlays, serverAnalyticsEvents.filter(e => e.eventType === 'song_play').length),
+    searches: Math.max(totalSearches, serverAnalyticsEvents.filter(e => e.eventType === 'search').length),
+    downloads: Math.max(totalDownloads, serverAnalyticsEvents.filter(e => e.eventType === 'download').length),
+    likes: Math.max(totalLikes, serverAnalyticsEvents.filter(e => e.eventType === 'like').length),
+    dailyData,
+    topSearches: Array.from(searchCounts.entries()).map(([query, count]) => ({ query, count })).sort((a, b) => b.count - a.count).slice(0, 10),
+    topSongs: Array.from(songCounts.values()).sort((a, b) => b.count - a.count).slice(0, 10),
+    topArtists: Array.from(artistCounts.entries()).map(([artist, count]) => ({ artist, count })).sort((a, b) => b.count - a.count).slice(0, 10),
+    popularLanguages: Array.from(langCounts.entries()).map(([language, count]) => ({ language, count })).sort((a, b) => b.count - a.count),
+    recentEvents: serverAnalyticsEvents.slice(0, 30),
+  });
 });
 
 // 1. Result & Search API (compatible with cyberboysumanjay/JioSaavnAPI architecture)

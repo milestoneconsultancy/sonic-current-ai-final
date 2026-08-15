@@ -23,6 +23,7 @@ import {
   RefreshCw,
   Smartphone,
   Laptop,
+  Tablet,
   Activity,
   Users,
 } from 'lucide-react';
@@ -541,25 +542,36 @@ export const DashboardView: React.FC<DashboardViewProps> = () => {
             {activeUsersList.map((user, idx) => (
               <div key={user.sessionId || idx} className="py-2.5 flex items-center justify-between text-xs gap-3">
                 <div className="flex items-center gap-2.5 min-w-0">
-                  <div className="w-7 h-7 rounded-full bg-black/5 dark:bg-white/10 flex items-center justify-center text-black dark:text-white shrink-0">
+                  <div className="w-8 h-8 rounded-full bg-black/5 dark:bg-white/10 flex items-center justify-center text-black dark:text-white shrink-0">
                     {user.device === 'Mobile' ? (
-                      <Smartphone className="w-3.5 h-3.5 text-[#FA2D48]" />
+                      <Smartphone className="w-4 h-4 text-[#FA2D48]" />
+                    ) : user.device === 'Tablet' ? (
+                      <Tablet className="w-4 h-4 text-[#FA2D48]" />
                     ) : (
-                      <Laptop className="w-3.5 h-3.5 text-[#FA2D48]" />
+                      <Laptop className="w-4 h-4 text-[#FA2D48]" />
                     )}
                   </div>
                   <div className="flex flex-col min-w-0">
-                    <span className="font-semibold text-black dark:text-white truncate">
-                      {user.email && user.email !== 'anonymous' ? user.email : `User #${(user.sessionId || '88').slice(-4)}`}
-                    </span>
+                    <div className="flex items-center gap-2">
+                      <span className="font-semibold text-black dark:text-white truncate">
+                        {user.email && user.email !== 'anonymous' && user.email !== 'Guest Visitor'
+                          ? user.email
+                          : `Device #${(user.sessionId || '88').slice(-5)}`}
+                      </span>
+                      <span className="px-1.5 py-0.2 bg-[#FA2D48]/10 text-[#FA2D48] text-[9px] font-bold rounded">
+                        {user.device}
+                      </span>
+                    </div>
                     <span className="text-[10px] text-[#8E8E93] truncate">
-                      {user.device} • {user.browser || 'Browser'} • Tab: <span className="capitalize">{user.page || 'Home'}</span>
+                      {user.deviceDetail || `${user.os || ''} ${user.browser || ''}`.trim() || 'Device'} • Tab: <span className="capitalize">{user.page || 'Home'}</span>
+                      {user.activeSong ? ` • 🎵 ${user.activeSong}` : ''}
                     </span>
                   </div>
                 </div>
 
                 <div className="text-right shrink-0">
-                  <span className="px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-500 text-[10px] font-bold">
+                  <span className="px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-500 text-[10px] font-bold flex items-center gap-1">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
                     Online
                   </span>
                 </div>
