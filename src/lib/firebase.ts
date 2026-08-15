@@ -1,6 +1,6 @@
 import { initializeApp, getApps, getApp } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
-import { getFirestore, disableNetwork } from 'firebase/firestore';
+import { getFirestore } from 'firebase/firestore';
 import { getDatabase } from 'firebase/database';
 import config from '../../firebase-applet-config.json';
 
@@ -16,15 +16,14 @@ export const auth = getAuth(app);
 export const db = getFirestore(app);
 export const rtdb = getDatabase(app, firebaseConfig.databaseURL);
 
-let isFirestoreDisabledFlag = false;
+let firestoreDisabled = false;
 
 export function isFirestoreDisabled(): boolean {
-  return false;
+  return firestoreDisabled;
 }
 
 export function markFirestoreDisabled() {
-  // No-op: keep Firestore active
+  firestoreDisabled = true;
 }
 
 export default app;
-

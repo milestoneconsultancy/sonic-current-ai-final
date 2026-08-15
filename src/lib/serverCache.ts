@@ -1,4 +1,4 @@
-import { db, markFirestoreDisabled, isFirestoreDisabled as checkIsDisabled } from './firebase.js';
+import { db, markFirestoreDisabled, isFirestoreDisabled as checkIsDisabled } from './firebase';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 
 const memoryFallback = new Map<string, { value: any; expiresAt: number }>();
