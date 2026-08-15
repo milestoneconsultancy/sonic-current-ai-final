@@ -19,16 +19,11 @@ export const rtdb = getDatabase(app, firebaseConfig.databaseURL);
 let isFirestoreDisabledFlag = false;
 
 export function isFirestoreDisabled(): boolean {
-  return isFirestoreDisabledFlag;
+  return false;
 }
 
 export function markFirestoreDisabled() {
-  if (!isFirestoreDisabledFlag) {
-    isFirestoreDisabledFlag = true;
-    try {
-      disableNetwork(db).catch(() => {});
-    } catch (_) {}
-  }
+  // No-op: keep Firestore active
 }
 
 export default app;

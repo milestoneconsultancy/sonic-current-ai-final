@@ -144,13 +144,22 @@ export default function App() {
     }
   };
 
+  // Player State
+  const [currentSong, setCurrentSong] = useState<Song | null>(null);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [duration, setDuration] = useState(0);
+  const [currentTime, setCurrentTime] = useState(0);
+
   // Realtime Presence Listener
   useEffect(() => {
-    const cleanup = initRealtimePresence();
+    const cleanup = initRealtimePresence({
+      currentPage: currentTab,
+      currentSong,
+    });
     return () => {
       if (cleanup) cleanup();
     };
-  }, []);
+  }, [currentTab, currentSong]);
 
   // Track Page Views
   useEffect(() => {
@@ -166,12 +175,6 @@ export default function App() {
   const [searchPage, setSearchPage] = useState<number>(1);
   const [hasMoreResults, setHasMoreResults] = useState<boolean>(true);
   const [isLoadingMore, setIsLoadingMore] = useState<boolean>(false);
-
-  // Player State
-  const [currentSong, setCurrentSong] = useState<Song | null>(null);
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [duration, setDuration] = useState(0);
-  const [currentTime, setCurrentTime] = useState(0);
 
   // Audio & Settings
   const initialSettings = getPlayerSettings();

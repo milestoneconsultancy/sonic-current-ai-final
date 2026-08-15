@@ -6,7 +6,6 @@ import {
   User,
 } from 'firebase/auth';
 import {
-  Users,
   Eye,
   Music,
   Search,
@@ -22,10 +21,15 @@ import {
   Radio,
   Clock,
   RefreshCw,
+  Smartphone,
+  Laptop,
+  Activity,
+  Users,
 } from 'lucide-react';
 import { auth } from '../lib/firebase';
 import {
   subscribeToActiveUsers,
+  subscribeToLiveEvents,
   fetchAnalyticsSummary,
   AnalyticsSummary,
 } from '../lib/analytics';
@@ -74,6 +78,8 @@ export const DashboardView: React.FC<DashboardViewProps> = () => {
   const [analytics, setAnalytics] = useState<AnalyticsSummary | null>(null);
   const [isLoadingData, setIsLoadingData] = useState(false);
 
+  const isAdmin = localAdmin || checkIsAdmin(currentUser);
+
   // Auth Listener
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
@@ -104,7 +110,31 @@ export const DashboardView: React.FC<DashboardViewProps> = () => {
     }
   };
 
-  const isAdmin = localAdmin || checkIsAdmin(currentUser);
+  // Subscribe to Live Realtime Events
+  useEffect(() => {
+    if (!isAdmin) return;
+    const unsubLive = subscribeToLiveEvents((liveEvents) => {
+      if (liveEvents && liveEvents.length > 0) {
+        setAnalytics((prev) => {
+          if (!prev) return prev;
+          return {
+            ...prev,
+            recentActivity: liveEvents,
+          };
+        });
+      }
+    });
+    return () => unsubLive();
+  }, [isAdmin]);
+
+  // Periodic Auto-Sync Every 15 seconds
+  useEffect(() => {
+    if (!isAdmin) return;
+    const timer = setInterval(() => {
+      loadData();
+    }, 15000);
+    return () => clearInterval(timer);
+  }, [isAdmin, timeRange]);
 
   useEffect(() => {
     if (isAdmin) {
@@ -492,35 +522,85 @@ export const DashboardView: React.FC<DashboardViewProps> = () => {
         </div>
       </div>
 
-      {/* Live Recent Activity Feed */}
-      <div className="p-6 rounded-[20px] bg-[#FFFFFF] dark:bg-[#1C1C1E] border border-[#C6C6C8]/40 dark:border-[#38383A]/60 shadow-xs space-y-4">
-        <h2 className="text-xs font-bold uppercase tracking-wider text-black dark:text-white flex items-center gap-2">
-          <Radio className="w-4 h-4 text-[#FA2D48] animate-pulse" />
-          <span>Realtime Live Event Stream</span>
-        </h2>
+      {/* Live Connected Sessions & Realtime Stream Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
+        {/* Connected Live Users Card */}
+        <div className="p-6 rounded-[20px] bg-[#FFFFFF] dark:bg-[#1C1C1E] border border-[#C6C6C8]/40 dark:border-[#38383A]/60 shadow-xs space-y-4">
+          <div className="flex items-center justify-between">
+            <h2 className="text-xs font-bold uppercase tracking-wider text-black dark:text-white flex items-center gap-2">
+              <Users className="w-4 h-4 text-[#FA2D48]" />
+              <span>Live Connected Sessions ({activeUsersList.length})</span>
+            </h2>
+            <span className="flex items-center gap-1 text-[10px] font-semibold text-[#FA2D48]">
+              <span className="w-2 h-2 rounded-full bg-[#FA2D48] animate-ping" />
+              Live Presence
+            </span>
+          </div>
 
-        {analytics?.recentActivity && analytics.recentActivity.length > 0 ? (
           <div className="divide-y divide-[#C6C6C8]/30 dark:divide-[#38383A]/50 max-h-64 overflow-y-auto pr-1">
-            {analytics.recentActivity.map((act) => (
-              <div key={act.id} className="py-2.5 flex items-center justify-between text-xs gap-3">
+            {activeUsersList.map((user, idx) => (
+              <div key={user.sessionId || idx} className="py-2.5 flex items-center justify-between text-xs gap-3">
                 <div className="flex items-center gap-2.5 min-w-0">
-                  <span className="px-2 py-0.5 rounded-full bg-[#FA2D48]/10 text-[#FA2D48] font-bold uppercase text-[9px] shrink-0">
-                    {act.type}
-                  </span>
-                  <span className="font-medium text-black dark:text-white truncate">
-                    {act.query ? `Query: "${act.query}"` : `${act.title || 'Song'} ${act.artist ? 'by ' + act.artist : ''}`}
+                  <div className="w-7 h-7 rounded-full bg-black/5 dark:bg-white/10 flex items-center justify-center text-black dark:text-white shrink-0">
+                    {user.device === 'Mobile' ? (
+                      <Smartphone className="w-3.5 h-3.5 text-[#FA2D48]" />
+                    ) : (
+                      <Laptop className="w-3.5 h-3.5 text-[#FA2D48]" />
+                    )}
+                  </div>
+                  <div className="flex flex-col min-w-0">
+                    <span className="font-semibold text-black dark:text-white truncate">
+                      {user.email && user.email !== 'anonymous' ? user.email : `User #${(user.sessionId || '88').slice(-4)}`}
+                    </span>
+                    <span className="text-[10px] text-[#8E8E93] truncate">
+                      {user.device} • {user.browser || 'Browser'} • Tab: <span className="capitalize">{user.page || 'Home'}</span>
+                    </span>
+                  </div>
+                </div>
+
+                <div className="text-right shrink-0">
+                  <span className="px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-500 text-[10px] font-bold">
+                    Online
                   </span>
                 </div>
-                <span className="text-[10px] text-[#8E8E93] shrink-0 flex items-center gap-1">
-                  <Clock className="w-3 h-3" />
-                  {act.timestamp ? new Date(act.timestamp).toLocaleTimeString() : ''}
-                </span>
               </div>
             ))}
           </div>
-        ) : (
-          <p className="text-xs text-[#8E8E93] italic">No recent activity events recorded yet.</p>
-        )}
+        </div>
+
+        {/* Live Recent Activity Feed */}
+        <div className="p-6 rounded-[20px] bg-[#FFFFFF] dark:bg-[#1C1C1E] border border-[#C6C6C8]/40 dark:border-[#38383A]/60 shadow-xs space-y-4">
+          <div className="flex items-center justify-between">
+            <h2 className="text-xs font-bold uppercase tracking-wider text-black dark:text-white flex items-center gap-2">
+              <Activity className="w-4 h-4 text-[#FA2D48] animate-pulse" />
+              <span>Realtime Live Action Stream</span>
+            </h2>
+            <span className="text-[10px] text-[#8E8E93]">Auto-updated</span>
+          </div>
+
+          {analytics?.recentActivity && analytics.recentActivity.length > 0 ? (
+            <div className="divide-y divide-[#C6C6C8]/30 dark:divide-[#38383A]/50 max-h-64 overflow-y-auto pr-1">
+              {analytics.recentActivity.map((act) => (
+                <div key={act.id} className="py-2.5 flex items-center justify-between text-xs gap-3">
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <span className="px-2 py-0.5 rounded-full bg-[#FA2D48]/10 text-[#FA2D48] font-bold uppercase text-[9px] shrink-0">
+                      {act.type}
+                    </span>
+                    <span className="font-medium text-black dark:text-white truncate">
+                      {act.query ? `Query: "${act.query}"` : `${act.title || 'Song'} ${act.artist ? 'by ' + act.artist : ''}`}
+                    </span>
+                  </div>
+                  <span className="text-[10px] text-[#8E8E93] shrink-0 flex items-center gap-1">
+                    <Clock className="w-3 h-3" />
+                    {act.timestamp ? new Date(act.timestamp).toLocaleTimeString() : ''}
+                  </span>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-xs text-[#8E8E93] italic">No recent activity events recorded yet.</p>
+          )}
+        </div>
       </div>
     </div>
   );
