@@ -28,5 +28,9 @@ service cloud.firestore {
     match /daily_summaries/{docId} {
       allow read, write: if true;
     }
+
+    match /analytics_daily/{docId} {
+      allow read, write: if true;
+    }
   }
 }

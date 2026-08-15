@@ -261,7 +261,7 @@ export const DashboardView: React.FC<DashboardViewProps> = () => {
               </span>
             </h1>
             <p className="text-xs text-[#3C3C43]/70 dark:text-[#8E8E93] font-normal mt-0.5">
-              Logged in as <span className="text-black dark:text-white font-medium">{currentUser.email}</span>
+              Logged in as <span className="text-black dark:text-white font-medium">{currentUser?.email || 'khandagalesuraj48@gmail.com (Creator)'}</span>
             </p>
           </div>
         </div>

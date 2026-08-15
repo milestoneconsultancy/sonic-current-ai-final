@@ -29,15 +29,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
   downloadsCount,
   isAdmin = false,
 }) => {
-  const mainNav: { id: TabType; label: string; icon: React.ElementType; badge?: number | null }[] = [
+  const mainNav: { id: TabType; label: string; icon: React.ElementType; badge?: number | string | null }[] = [
     { id: 'home', label: 'Listen Now', icon: Compass },
     { id: 'instantmix', label: 'Radio & Mixes', icon: Radio },
     { id: 'search', label: 'Search', icon: Search },
+    { id: 'dashboard', label: 'Admin Portal', icon: LayoutDashboard, badge: isAdmin ? 'Live' : null },
   ];
-
-  if (isAdmin) {
-    mainNav.push({ id: 'dashboard', label: 'Admin Dashboard', icon: LayoutDashboard });
-  }
 
   const libraryNav: { id: TabType; label: string; icon: React.ElementType; badge?: number | null }[] = [
     { id: 'favorites', label: 'Favorite Songs', icon: Heart, badge: favoritesCount > 0 ? favoritesCount : null },
