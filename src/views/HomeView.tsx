@@ -46,17 +46,6 @@ const SPOTLIGHT_BANNERS = [
   },
 ];
 
-const GENRE_TILES = [
-  { title: 'Bollywood Hits', color: 'from-[#E0284F] to-[#801026]', query: 'bollywood hits' },
-  { title: 'Romantic Ballads', color: 'from-[#FF2D55] to-[#7B113A]', query: 'romantic melodies' },
-  { title: 'Punjabi Pop', color: 'from-[#FF9500] to-[#B34700]', query: 'punjabi pop hits' },
-  { title: 'Chill & Lo-Fi', color: 'from-[#5856D6] to-[#2C2B6B]', query: 'lofi hindi chill' },
-  { title: 'Devotional & Bhakti', color: 'from-[#FF9F0A] to-[#8F5300]', query: 'bhakti devotional songs' },
-  { title: 'Party & Dance', color: 'from-[#AF52DE] to-[#551A8B]', query: 'bollywood party dance' },
-  { title: 'Marathi Superhits', color: 'from-[#007AFF] to-[#003882]', query: 'marathi superhits' },
-  { title: 'South Regional', color: 'from-[#34C759] to-[#125C26]', query: 'south indian top hits' },
-];
-
 export const HomeView: React.FC<HomeViewProps> = ({
   onTabChange,
   recentlyPlayed,
@@ -370,43 +359,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
         </div>
       </div>
 
-      {/* 4. Browse by Category & Mood (12pt Radius Tiles) */}
-      <div className="space-y-3">
-        <div className="flex items-center justify-between pb-1 border-b border-[#C6C6C8]/30 dark:border-[#38383A]/50">
-          <h2 className="text-xl font-bold text-black dark:text-white tracking-tight">
-            Browse by Genre
-          </h2>
-          <button
-            onClick={() => onTabChange('search')}
-            className="text-xs font-semibold text-[#FA2D48] hover:underline flex items-center gap-0.5 cursor-pointer"
-          >
-            <span>See All</span>
-            <ChevronRight className="w-3.5 h-3.5" />
-          </button>
-        </div>
-
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          {GENRE_TILES.map((tile, idx) => (
-            <div
-              key={idx}
-              onClick={() => onTabChange('search')}
-              className={`relative overflow-hidden rounded-[12px] p-4 h-24 bg-gradient-to-br ${tile.color} text-white shadow-xs hover:shadow-md transition-all cursor-pointer flex flex-col justify-between select-none`}
-            >
-              <h3 className="font-bold text-sm tracking-tight leading-snug">
-                {tile.title}
-              </h3>
-              <div className="flex items-center justify-between opacity-90 text-[10px] font-semibold uppercase tracking-wider">
-                <span>Playlist</span>
-                <div className="w-6 h-6 rounded-full bg-white/20 flex items-center justify-center">
-                  <Play className="w-3 h-3 fill-current ml-0.5" />
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* 5. MADE FOR YOU (PERSONALIZED) SECTION */}
+      {/* 4. MADE FOR YOU (PERSONALIZED) SECTION */}
       <div className="space-y-3">
         <div className="flex items-center justify-between pb-1 border-b border-[#C6C6C8]/30 dark:border-[#38383A]/50">
           <div>
