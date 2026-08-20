@@ -668,17 +668,8 @@ export default function App() {
       }
     };
 
-    // Hardware / iOS Volume change listener
-    const handleVolumeChangeEvt = () => {
-      if (audio && typeof audio.volume === 'number' && !isNaN(audio.volume)) {
-        setVolume(audio.volume);
-        setIsMuted(audio.muted);
-      }
-    };
-
     audio.addEventListener('timeupdate', handleTimeUpdate);
     audio.addEventListener('loadedmetadata', handleLoadedMetadata);
-    audio.addEventListener('volumechange', handleVolumeChangeEvt);
 
     // One-time iOS Touch gesture unlock for instant audio session activation
     const unlockAudioSession = () => {
@@ -694,7 +685,6 @@ export default function App() {
     return () => {
       audio.removeEventListener('timeupdate', handleTimeUpdate);
       audio.removeEventListener('loadedmetadata', handleLoadedMetadata);
-      audio.removeEventListener('volumechange', handleVolumeChangeEvt);
       window.removeEventListener('touchstart', unlockAudioSession);
       window.removeEventListener('click', unlockAudioSession);
     };
@@ -1130,36 +1120,49 @@ export default function App() {
     }
   };
 
-  // Volume & Mute Controls (iOS & WebKit safe)
+  // Volume & Mute Controls (Smooth, Step-by-Step 0-100% control)
   const handleVolumeChange = (val: number) => {
-    const clamped = Math.max(0, Math.min(1, val));
+    const clamped = Math.max(0, Math.min(1, Math.round(val * 100) / 100));
     setVolume(clamped);
-    if (isMuted && clamped > 0) setIsMuted(false);
+    const newMuted = clamped === 0;
+    setIsMuted(newMuted);
+
     if (audioRef.current) {
       try {
-        audioRef.current.volume = isMuted ? 0 : clamped;
+        audioRef.current.volume = clamped;
       } catch (e) {
-        // iOS Safari read-only volume fallback
+        // iOS Safari hardware volume control
       }
       try {
-        audioRef.current.muted = isMuted || clamped === 0;
+        audioRef.current.muted = newMuted;
       } catch (e) {}
     }
-    savePlayerSettings({ volume: clamped, isMuted: isMuted && clamped > 0 ? false : isMuted });
+    savePlayerSettings({ volume: clamped, isMuted: newMuted });
   };
 
   const handleToggleMute = () => {
-    const nextMute = !isMuted;
-    setIsMuted(nextMute);
-    if (audioRef.current) {
-      try {
-        audioRef.current.volume = nextMute ? 0 : volume;
-      } catch (e) {}
-      try {
-        audioRef.current.muted = nextMute;
-      } catch (e) {}
+    if (isMuted || volume === 0) {
+      const restoredVol = volume > 0.05 ? volume : 0.8;
+      setVolume(restoredVol);
+      setIsMuted(false);
+      if (audioRef.current) {
+        try {
+          audioRef.current.volume = restoredVol;
+        } catch (e) {}
+        try {
+          audioRef.current.muted = false;
+        } catch (e) {}
+      }
+      savePlayerSettings({ volume: restoredVol, isMuted: false });
+    } else {
+      setIsMuted(true);
+      if (audioRef.current) {
+        try {
+          audioRef.current.muted = true;
+        } catch (e) {}
+      }
+      savePlayerSettings({ isMuted: true });
     }
-    savePlayerSettings({ isMuted: nextMute });
   };
 
   // Repeat & Shuffle Modes

@@ -8,6 +8,7 @@ import {
   Repeat,
   Repeat1,
   Shuffle,
+  Volume1,
   Volume2,
   VolumeX,
   Heart,
@@ -312,15 +313,18 @@ export const FullPlayerModal: React.FC<FullPlayerModalProps> = ({
             </button>
           </div>
 
-          {/* Volume Slider Row */}
-          <div className="flex items-center gap-3 px-4 pt-2">
+          {/* Volume Slider Row (Smooth 0-100% Step by Step) */}
+          <div className="flex items-center gap-2.5 px-4 pt-2">
             <button
               onClick={onToggleMute}
               aria-label={isMuted ? 'Unmute' : 'Mute'}
-              className="text-white/60 hover:text-white transition cursor-pointer p-1"
+              className="text-white/70 hover:text-white transition active:scale-90 cursor-pointer p-1.5 shrink-0"
+              title={isMuted ? 'Unmute' : 'Mute'}
             >
               {isMuted || volume === 0 ? (
                 <VolumeX className="w-4 h-4 text-[#FA2D48]" />
+              ) : volume < 0.5 ? (
+                <Volume1 className="w-4 h-4" />
               ) : (
                 <Volume2 className="w-4 h-4" />
               )}
@@ -329,12 +333,15 @@ export const FullPlayerModal: React.FC<FullPlayerModalProps> = ({
               type="range"
               min="0"
               max="1"
-              step="0.02"
+              step="0.01"
               value={isMuted ? 0 : volume}
               onChange={(e) => onVolumeChange(parseFloat(e.target.value))}
-              className="flex-1 h-1.5 accent-[#FA2D48] bg-white/20 rounded-full cursor-pointer"
-              title="Volume"
+              className="flex-1 h-1.5 accent-[#FA2D48] bg-white/20 rounded-full cursor-pointer touch-none"
+              title={`Volume: ${isMuted ? 0 : Math.round(volume * 100)}%`}
             />
+            <span className="text-[11px] font-medium text-white/60 tabular-nums w-8 text-right shrink-0 select-none">
+              {isMuted ? '0%' : `${Math.round(volume * 100)}%`}
+            </span>
           </div>
         </div>
       </div>
