@@ -283,8 +283,22 @@ export default function App() {
 
   // Ref - Persistent HTML5 Audio instance across re-renders/visibility changes
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const preloadAudioRef = useRef<HTMLAudioElement | null>(null);
+
   if (!audioRef.current) {
-    audioRef.current = new Audio();
+    const audio = new Audio();
+    audio.preload = 'auto';
+    audio.setAttribute('playsinline', 'true');
+    audio.setAttribute('webkit-playsinline', 'true');
+    audio.setAttribute('x-webkit-airplay', 'allow');
+    audioRef.current = audio;
+  }
+  if (!preloadAudioRef.current) {
+    const preloadAudio = new Audio();
+    preloadAudio.preload = 'auto';
+    preloadAudio.setAttribute('playsinline', 'true');
+    preloadAudio.setAttribute('webkit-playsinline', 'true');
+    preloadAudioRef.current = preloadAudio;
   }
 
   // Ref to hold restored playback position across reloads
@@ -623,12 +637,25 @@ export default function App() {
     return () => clearTimeout(timer);
   }, [searchQuery]);
 
-  // Audio Element Setup & Event Listeners
+  // Audio Element Setup & Event Listeners (with iOS Hardware Volume, Lock Screen & Fast Preload)
   useEffect(() => {
     const audio = audioRef.current;
     if (!audio) return;
 
-    const handleTimeUpdate = () => setCurrentTime(audio.currentTime);
+    const handleTimeUpdate = () => {
+      setCurrentTime(audio.currentTime);
+      // Sync MediaSession position state for iPhone Dynamic Island, Lock Screen & Control Center
+      if ('mediaSession' in navigator && 'setPositionState' in navigator.mediaSession && audio.duration && !isNaN(audio.duration)) {
+        try {
+          navigator.mediaSession.setPositionState({
+            duration: audio.duration,
+            playbackRate: audio.playbackRate || 1,
+            position: Math.min(audio.currentTime, audio.duration),
+          });
+        } catch (e) {}
+      }
+    };
+
     const handleLoadedMetadata = () => {
       if (audio.duration && !isNaN(audio.duration)) {
         setDuration(audio.duration);
@@ -641,12 +668,35 @@ export default function App() {
       }
     };
 
+    // Hardware / iOS Volume change listener
+    const handleVolumeChangeEvt = () => {
+      if (audio && typeof audio.volume === 'number' && !isNaN(audio.volume)) {
+        setVolume(audio.volume);
+        setIsMuted(audio.muted);
+      }
+    };
+
     audio.addEventListener('timeupdate', handleTimeUpdate);
     audio.addEventListener('loadedmetadata', handleLoadedMetadata);
+    audio.addEventListener('volumechange', handleVolumeChangeEvt);
+
+    // One-time iOS Touch gesture unlock for instant audio session activation
+    const unlockAudioSession = () => {
+      if (audioRef.current && audioRef.current.paused && (!audioRef.current.src || audioRef.current.src === window.location.href)) {
+        try {
+          audioRef.current.load();
+        } catch (e) {}
+      }
+    };
+    window.addEventListener('touchstart', unlockAudioSession, { once: true, passive: true });
+    window.addEventListener('click', unlockAudioSession, { once: true, passive: true });
 
     return () => {
       audio.removeEventListener('timeupdate', handleTimeUpdate);
       audio.removeEventListener('loadedmetadata', handleLoadedMetadata);
+      audio.removeEventListener('volumechange', handleVolumeChangeEvt);
+      window.removeEventListener('touchstart', unlockAudioSession);
+      window.removeEventListener('click', unlockAudioSession);
     };
   }, []);
 
@@ -716,11 +766,30 @@ export default function App() {
       const audio = audioRef.current;
       if (playableUrl && (audio.src !== playableUrl && !audio.src.endsWith(playableUrl))) {
         audio.src = playableUrl;
-        audio.volume = isMuted ? 0 : volume;
+        try {
+          audio.volume = isMuted ? 0 : volume;
+        } catch (e) {}
+        try {
+          audio.muted = isMuted;
+        } catch (e) {}
         audio.load();
       }
 
       await audio.play();
+
+      // Ultra-Fast Next-Track Background Preloading (0ms delay on skip)
+      if (queue.length > 1 && preloadAudioRef.current) {
+        const nextIdx = ((typeof indexInContext === 'number' ? indexInContext : queueIndex) + 1) % queue.length;
+        const nextTrack = queue[nextIdx];
+        if (nextTrack) {
+          getPlayableUrl(nextTrack).then((nextUrl) => {
+            if (nextUrl && preloadAudioRef.current) {
+              preloadAudioRef.current.src = nextUrl;
+              preloadAudioRef.current.load();
+            }
+          }).catch(() => {});
+        }
+      }
     } catch (err) {
       console.error('Audio playback error:', err);
       setIsPlaying(false);
@@ -745,6 +814,10 @@ export default function App() {
   // Media Session API Integration for Background & Lock Screen Playback
   useEffect(() => {
     if (!('mediaSession' in navigator) || !currentSong) return;
+
+    try {
+      navigator.mediaSession.playbackState = isPlaying ? 'playing' : 'paused';
+    } catch (e) {}
 
     navigator.mediaSession.metadata = new MediaMetadata({
       title: currentSong.title,
@@ -1057,21 +1130,34 @@ export default function App() {
     }
   };
 
-  // Volume & Mute Controls
+  // Volume & Mute Controls (iOS & WebKit safe)
   const handleVolumeChange = (val: number) => {
-    setVolume(val);
-    if (isMuted && val > 0) setIsMuted(false);
+    const clamped = Math.max(0, Math.min(1, val));
+    setVolume(clamped);
+    if (isMuted && clamped > 0) setIsMuted(false);
     if (audioRef.current) {
-      audioRef.current.volume = isMuted ? 0 : val;
+      try {
+        audioRef.current.volume = isMuted ? 0 : clamped;
+      } catch (e) {
+        // iOS Safari read-only volume fallback
+      }
+      try {
+        audioRef.current.muted = isMuted || clamped === 0;
+      } catch (e) {}
     }
-    savePlayerSettings({ volume: val, isMuted: isMuted && val > 0 ? false : isMuted });
+    savePlayerSettings({ volume: clamped, isMuted: isMuted && clamped > 0 ? false : isMuted });
   };
 
   const handleToggleMute = () => {
     const nextMute = !isMuted;
     setIsMuted(nextMute);
     if (audioRef.current) {
-      audioRef.current.volume = nextMute ? 0 : volume;
+      try {
+        audioRef.current.volume = nextMute ? 0 : volume;
+      } catch (e) {}
+      try {
+        audioRef.current.muted = nextMute;
+      } catch (e) {}
     }
     savePlayerSettings({ isMuted: nextMute });
   };
